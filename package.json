@@ -1,0 +1,20 @@
+{
+  "name": "red-medica-asistenta",
+  "version": "1.0.0",
+  "description": "Asistență Medicală la Domiciliu - Red Medica",
+  "private": true,
+  "engines": {
+    "node": ">=22.0.0",
+    "npm": ">=9.0.0"
+  },
+  "scripts": {
+    "build": "npm install --prefix backend && npm install --prefix frontend && npm run build --prefix frontend",
+    "start": "node backend/server.js",
+    "dev": "concurrently \"node backend/server.js\" \"npm start --prefix frontend\"",
+    "dev:backend": "node backend/server.js",
+    "dev:frontend": "npm start --prefix frontend"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
