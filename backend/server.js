@@ -12,9 +12,6 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 const IS_PROD = process.env.NODE_ENV === 'production';
 
-// ===== Inițializare bază de date =====
-initDatabase();
-
 // ===== Middleware =====
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
@@ -26,25 +23,25 @@ if (!IS_PROD) {
     credentials: true
   }));
 } else {
-  // În producție permitem orice origine (Railway poate redirecționa)
   app.use(cors({ credentials: true }));
 }
 
-// ===== API Routes =====
-app.use('/api/auth', authRoutes);
-app.use('/api/patients', patientRoutes);
-app.use('/api/visits', visitRoutes);
-app.use('/api/reports', reportRoutes);
-
-// Health check endpoint (folosit de Railway pentru monitoring)
+// ===== Health check (primul endpoint, fără dependență de DB) =====
+// Railway bate acest endpoint pentru a verifica că serverul e activ
 app.get('/api/health', (req, res) => {
-  res.json({
+  res.status(200).json({
     status: 'ok',
     env: process.env.NODE_ENV || 'development',
     timestamp: new Date().toISOString(),
     uptime: Math.floor(process.uptime())
   });
 });
+
+// ===== API Routes =====
+app.use('/api/auth', authRoutes);
+app.use('/api/patients', patientRoutes);
+app.use('/api/visits', visitRoutes);
+app.use('/api/reports', reportRoutes);
 
 // ===== Servire frontend în producție =====
 if (IS_PROD) {
@@ -73,11 +70,22 @@ app.use((err, req, res, next) => {
 });
 
 // ===== Start server =====
+// Serverul ascultă ÎNAINTE de inițializarea DB
+// Astfel Railway health check poate răspunde imediat
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`✓ Server pornit pe portul ${PORT}`);
   console.log(`✓ Mediu: ${process.env.NODE_ENV || 'development'}`);
   if (!IS_PROD) {
     console.log(`✓ API: http://localhost:${PORT}/api`);
     console.log(`✓ Health: http://localhost:${PORT}/api/health`);
+  }
+
+  // Inițializare DB după ce serverul a pornit
+  try {
+    initDatabase();
+    console.log('✓ Baza de date inițializată cu succes');
+  } catch (err) {
+    console.error('[FATAL] Nu s-a putut inițializa baza de date:', err.message);
+    process.exit(1);
   }
 });
