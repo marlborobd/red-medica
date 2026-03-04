@@ -5,11 +5,8 @@ const { authenticate } = require('../middleware/auth');
 
 router.get('/patient/:patientId', authenticate, (req, res) => {
   const db = getDb();
-  const patient = db.prepare('SELECT * FROM patients WHERE id = ?').get(req.params.patientId);
+  const patient = db.prepare('SELECT id FROM patients WHERE id = ?').get(req.params.patientId);
   if (!patient) return res.status(404).json({ error: 'Pacient negăsit' });
-  if (req.user.role !== 'admin' && patient.utilizator_creator_id !== req.user.id) {
-    return res.status(403).json({ error: 'Acces interzis' });
-  }
   const visits = db.prepare(`
     SELECT v.*, u.name as angajat_name
     FROM visits v
@@ -30,10 +27,6 @@ router.get('/:id', authenticate, (req, res) => {
     WHERE v.id = ?
   `).get(req.params.id);
   if (!visit) return res.status(404).json({ error: 'Vizita negăsită' });
-  const patient = db.prepare('SELECT utilizator_creator_id FROM patients WHERE id = ?').get(visit.patient_id);
-  if (req.user.role !== 'admin' && patient.utilizator_creator_id !== req.user.id) {
-    return res.status(403).json({ error: 'Acces interzis' });
-  }
   res.json(visit);
 });
 

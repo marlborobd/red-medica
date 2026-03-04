@@ -67,7 +67,12 @@ export default function Layout() {
         </button>
 
         <div className="mobile-logo-center">
-          <img src="/logo.png" alt="Red Medica" className="mobile-logo-img" />
+          <img
+            src={process.env.REACT_APP_LOGO_URL || '/logo.png'}
+            alt="Red Medica"
+            className="mobile-logo-img"
+            style={{ width: 40, height: 40, objectFit: 'contain' }}
+          />
           <span>{getPageTitle()}</span>
         </div>
 
@@ -82,8 +87,13 @@ export default function Layout() {
 
       {/* Desktop / Mobile Sidebar */}
       <aside className={`sidebar ${sidebarOpen ? 'open' : ''}`} role="navigation">
-        <div className="sidebar-logo">
-          <img src="/logo.png" alt="Red Medica" className="sidebar-logo-img" />
+        <div className="sidebar-logo" style={{ flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
+          <img
+            src={process.env.REACT_APP_LOGO_URL || '/logo.png'}
+            alt="Red Medica"
+            className="sidebar-logo-img"
+            style={{ width: 80, height: 80, objectFit: 'contain', marginBottom: 8 }}
+          />
           <div>
             <div className="logo-text">Red Medica</div>
             <div className="logo-sub">Asistență la Domiciliu</div>

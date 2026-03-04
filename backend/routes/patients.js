@@ -46,9 +46,6 @@ router.get('/:id', authenticate, (req, res) => {
   `).get(req.params.id);
 
   if (!patient) return res.status(404).json({ error: 'Pacient negăsit' });
-  if (req.user.role !== 'admin' && patient.utilizator_creator_id !== req.user.id) {
-    return res.status(403).json({ error: 'Acces interzis' });
-  }
   res.json(patient);
 });
 
