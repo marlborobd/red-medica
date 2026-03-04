@@ -41,7 +41,8 @@ router.post('/', authenticate, (req, res) => {
   const {
     patient_id, diagnostic, tratament, cass, perioada_tratament_inceput,
     perioada_tratament_sfarsit, zile_cass, servicii_efectuate, stare_pacient,
-    medicamente, tensiune, temperatura, observatii, suma_de_plata, suma_incasata
+    medicamente, tensiune, temperatura, observatii, suma_de_plata, suma_incasata,
+    poze
   } = req.body;
 
   if (!patient_id) return res.status(400).json({ error: 'ID pacient obligatoriu' });
@@ -62,15 +63,16 @@ router.post('/', authenticate, (req, res) => {
       patient_id, data, ora, angajat_id, diagnostic, tratament, cass,
       perioada_tratament_inceput, perioada_tratament_sfarsit, zile_cass,
       servicii_efectuate, stare_pacient, medicamente, tensiune, temperatura,
-      observatii, suma_de_plata, suma_incasata
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      observatii, suma_de_plata, suma_incasata, poze
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     patient_id, data, ora, req.user.id,
     diagnostic || '', tratament || '', cass || '',
     perioada_tratament_inceput || null, perioada_tratament_sfarsit || null,
     zile_cass || 0, servicii_efectuate || '', stare_pacient || '',
     medicamente || '', tensiune || '', temperatura || null,
-    observatii || '', suma_de_plata || 0, suma_incasata || 0
+    observatii || '', suma_de_plata || 0, suma_incasata || 0,
+    poze || '[]'
   );
   res.status(201).json({ id: result.lastInsertRowid });
 });
@@ -86,18 +88,21 @@ router.put('/:id', authenticate, (req, res) => {
   const {
     diagnostic, tratament, cass, perioada_tratament_inceput, perioada_tratament_sfarsit,
     zile_cass, servicii_efectuate, stare_pacient, medicamente, tensiune, temperatura,
-    observatii, suma_de_plata, suma_incasata
+    observatii, suma_de_plata, suma_incasata, poze
   } = req.body;
 
   db.prepare(`
     UPDATE visits SET diagnostic=?, tratament=?, cass=?, perioada_tratament_inceput=?,
     perioada_tratament_sfarsit=?, zile_cass=?, servicii_efectuate=?, stare_pacient=?,
-    medicamente=?, tensiune=?, temperatura=?, observatii=?, suma_de_plata=?, suma_incasata=?
+    medicamente=?, tensiune=?, temperatura=?, observatii=?, suma_de_plata=?, suma_incasata=?,
+    poze=?
     WHERE id=?
   `).run(
     diagnostic, tratament, cass, perioada_tratament_inceput, perioada_tratament_sfarsit,
     zile_cass, servicii_efectuate, stare_pacient, medicamente, tensiune, temperatura,
-    observatii, suma_de_plata, suma_incasata, req.params.id
+    observatii, suma_de_plata, suma_incasata,
+    poze !== undefined ? poze : (visit.poze || '[]'),
+    req.params.id
   );
   res.json({ success: true });
 });

@@ -3,19 +3,16 @@ const bcrypt = require('bcryptjs');
 const path = require('path');
 const fs = require('fs');
 
-// Calea DB: configurabilă prin env var (Railway Volume) sau local
 const DB_PATH = process.env.DATABASE_PATH
   ? path.resolve(process.env.DATABASE_PATH)
   : path.join(__dirname, 'asistenta.db');
 
-let sqlJsDb = null; // instanța internă sql.js
+let sqlJsDb = null;
 
-// ===== Persistență pe disc =====
-// sql.js lucrează in-memory; la fiecare scriere exportăm și salvăm pe disc
 function saveDb() {
   if (!sqlJsDb) return;
   try {
-    const data = sqlJsDb.export(); // Uint8Array cu conținutul SQLite
+    const data = sqlJsDb.export();
     const dir = path.dirname(DB_PATH);
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
     fs.writeFileSync(DB_PATH, Buffer.from(data));
@@ -24,26 +21,18 @@ function saveDb() {
   }
 }
 
-// ===== Wrapper Statement — API identic cu better-sqlite3 =====
-// Rutele existente folosesc .get(), .all(), .run() fără modificări
 class Statement {
-  constructor(sql) {
-    this._sql = sql;
-  }
+  constructor(sql) { this._sql = sql; }
 
-  // Returnează primul rând sau undefined
   get(...args) {
     const params = args.flat().map(v => (v === undefined ? null : v));
     const stmt = sqlJsDb.prepare(this._sql);
     try {
       if (params.length > 0) stmt.bind(params);
       return stmt.step() ? stmt.getAsObject() : undefined;
-    } finally {
-      stmt.free();
-    }
+    } finally { stmt.free(); }
   }
 
-  // Returnează toate rândurile ca array de obiecte
   all(...args) {
     const params = args.flat().map(v => (v === undefined ? null : v));
     const stmt = sqlJsDb.prepare(this._sql);
@@ -52,39 +41,23 @@ class Statement {
       const rows = [];
       while (stmt.step()) rows.push(stmt.getAsObject());
       return rows;
-    } finally {
-      stmt.free();
-    }
+    } finally { stmt.free(); }
   }
 
-  // Execută INSERT/UPDATE/DELETE și salvează pe disc
   run(...args) {
     const params = args.flat().map(v => (v === undefined ? null : v));
     sqlJsDb.run(this._sql, params.length > 0 ? params : undefined);
-    // Obținem ID-ul ultimului INSERT (0 pentru UPDATE/DELETE)
     const idResult = sqlJsDb.exec('SELECT last_insert_rowid()');
     const lastInsertRowid = idResult.length > 0 ? idResult[0].values[0][0] : 0;
-    saveDb(); // persistare imediată după fiecare scriere
+    saveDb();
     return { lastInsertRowid };
   }
 }
 
-// ===== Obiect db — interfață publică compatibilă cu better-sqlite3 =====
 const db = {
-  // exec(): pentru DDL cu mai multe instrucțiuni (CREATE TABLE etc.)
-  exec(sql) {
-    sqlJsDb.exec(sql);
-    return this;
-  },
-  // pragma(): setări SQLite
-  pragma(str) {
-    try { sqlJsDb.run('PRAGMA ' + str); } catch (_) {}
-    return this;
-  },
-  // prepare(): returnează un Statement wrapper
-  prepare(sql) {
-    return new Statement(sql);
-  }
+  exec(sql) { sqlJsDb.exec(sql); return this; },
+  pragma(str) { try { sqlJsDb.run('PRAGMA ' + str); } catch (_) {} return this; },
+  prepare(sql) { return new Statement(sql); }
 };
 
 function getDb() {
@@ -92,22 +65,69 @@ function getDb() {
   return db;
 }
 
-// ===== Inițializare asincronă (sql.js încarcă WebAssembly) =====
+// ===== Migrare: elimină constrângerea NOT NULL de pe cnp =====
+function migrateCnpColumn() {
+  try {
+    const stmt = sqlJsDb.prepare('PRAGMA table_info(patients)');
+    const cols = [];
+    while (stmt.step()) cols.push(stmt.getAsObject());
+    stmt.free();
+
+    const cnpCol = cols.find(c => c.name === 'cnp');
+    if (!cnpCol || !cnpCol.notnull) return; // deja ok sau coloana nu există
+
+    console.log('Migration: eliminare constrângere cnp NOT NULL...');
+    sqlJsDb.exec(`
+      CREATE TABLE patients_v2 (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        nume TEXT NOT NULL,
+        cnp TEXT,
+        data_nasterii TEXT,
+        varsta INTEGER,
+        adresa TEXT,
+        telefon TEXT,
+        acord_gdpr INTEGER DEFAULT 0,
+        utilizator_creator_id INTEGER,
+        data_inregistrare TEXT DEFAULT (datetime('now', 'localtime')),
+        FOREIGN KEY (utilizator_creator_id) REFERENCES users(id)
+      );
+      INSERT INTO patients_v2
+        SELECT id, nume, cnp, data_nasterii, varsta, adresa, telefon,
+               acord_gdpr, utilizator_creator_id, data_inregistrare
+        FROM patients;
+      DROP TABLE patients;
+      ALTER TABLE patients_v2 RENAME TO patients;
+    `);
+    saveDb();
+    console.log('✓ Migration cnp completată');
+  } catch (err) {
+    console.error('[Migration cnp]', err.message);
+  }
+}
+
+// ===== Migrare: adaugă coloana poze în visits dacă nu există =====
+function migrateAddPozeColumn() {
+  try {
+    sqlJsDb.exec("ALTER TABLE visits ADD COLUMN poze TEXT DEFAULT '[]'");
+    saveDb();
+    console.log('✓ Migration: coloana poze adăugată');
+  } catch (_) {
+    // coloana există deja — normal
+  }
+}
+
 async function initDatabase() {
-  // Asigură directorul
   const dbDir = path.dirname(DB_PATH);
   if (!fs.existsSync(dbDir)) {
     fs.mkdirSync(dbDir, { recursive: true });
     console.log(`✓ Director creat: ${dbDir}`);
   }
 
-  // Inițializare sql.js cu calea explicită spre fișierul wasm
   const SQL = await initSqlJs({
     locateFile: filename =>
       path.join(__dirname, 'node_modules', 'sql.js', 'dist', filename)
   });
 
-  // Încarcă baza de date existentă sau creează una nouă
   if (fs.existsSync(DB_PATH)) {
     const fileBuffer = fs.readFileSync(DB_PATH);
     sqlJsDb = new SQL.Database(fileBuffer);
@@ -117,7 +137,7 @@ async function initDatabase() {
     console.log(`✓ Baza de date nouă: ${DB_PATH}`);
   }
 
-  // Creare tabele (suportă multiple instrucțiuni separate prin ;)
+  // Creare tabele noi (fără cnp NOT NULL/UNIQUE)
   db.exec(`
     CREATE TABLE IF NOT EXISTS users (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -132,7 +152,7 @@ async function initDatabase() {
     CREATE TABLE IF NOT EXISTS patients (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       nume TEXT NOT NULL,
-      cnp TEXT UNIQUE NOT NULL,
+      cnp TEXT,
       data_nasterii TEXT,
       varsta INTEGER,
       adresa TEXT,
@@ -163,13 +183,18 @@ async function initDatabase() {
       observatii TEXT,
       suma_de_plata REAL DEFAULT 0,
       suma_incasata REAL DEFAULT 0,
+      poze TEXT DEFAULT '[]',
       created_at TEXT DEFAULT (datetime('now', 'localtime')),
       FOREIGN KEY (patient_id) REFERENCES patients(id),
       FOREIGN KEY (angajat_id) REFERENCES users(id)
     );
   `);
 
-  // Creare user admin implicit dacă nu există
+  // Migrări pentru baze de date existente
+  migrateCnpColumn();
+  migrateAddPozeColumn();
+
+  // Admin
   const adminEmail = process.env.ADMIN_EMAIL || 'admin@asistenta.ro';
   const adminPassword = process.env.ADMIN_PASSWORD || 'Admin123!';
   const adminName = process.env.ADMIN_NAME || 'Administrator';
@@ -182,7 +207,6 @@ async function initDatabase() {
     console.log(`✓ Admin creat: ${adminEmail}`);
   }
 
-  // Salvare stare inițială pe disc
   saveDb();
   console.log('✓ Baza de date inițializată cu succes');
 }

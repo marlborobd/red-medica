@@ -7,6 +7,8 @@ const authRoutes = require('./routes/auth');
 const patientRoutes = require('./routes/patients');
 const visitRoutes = require('./routes/visits');
 const reportRoutes = require('./routes/reports');
+const uploadRoutes = require('./routes/upload');
+const { scheduleBackup } = require('./routes/backup');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -16,7 +18,6 @@ const IS_PROD = process.env.NODE_ENV === 'production';
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
-// CORS: în development permite localhost:3000, în producție same origin
 if (!IS_PROD) {
   app.use(cors({
     origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
@@ -26,7 +27,7 @@ if (!IS_PROD) {
   app.use(cors({ credentials: true }));
 }
 
-// ===== Health check (fără dependență de DB, Railway îl bate primul) =====
+// ===== Health check =====
 app.get('/api/health', (req, res) => {
   res.status(200).json({
     status: 'ok',
@@ -41,25 +42,19 @@ app.use('/api/auth', authRoutes);
 app.use('/api/patients', patientRoutes);
 app.use('/api/visits', visitRoutes);
 app.use('/api/reports', reportRoutes);
+app.use('/api/upload', uploadRoutes);
 
-// ===== Servire frontend în producție =====
+// ===== Frontend în producție =====
 if (IS_PROD) {
   const frontendBuildPath = path.join(__dirname, '..', 'frontend', 'build');
-
-  app.use(express.static(frontendBuildPath, {
-    maxAge: '1y',
-    etag: true
-  }));
-
-  // React Router — returnează index.html pentru toate rutele non-API
+  app.use(express.static(frontendBuildPath, { maxAge: '1y', etag: true }));
   app.get('*', (req, res) => {
     res.sendFile(path.join(frontendBuildPath, 'index.html'));
   });
-
   console.log(`✓ Frontend servit din: ${frontendBuildPath}`);
 }
 
-// ===== Error handler global =====
+// ===== Error handler =====
 app.use((err, req, res, next) => {
   console.error('[ERROR]', err.message);
   res.status(err.status || 500).json({
@@ -67,9 +62,7 @@ app.use((err, req, res, next) => {
   });
 });
 
-// ===== Start server =====
-// initDatabase() este async (sql.js încarcă WebAssembly)
-// Serverul pornește doar după ce DB este gata
+// ===== Pornire =====
 initDatabase()
   .then(() => {
     app.listen(PORT, '0.0.0.0', () => {
@@ -77,9 +70,11 @@ initDatabase()
       console.log(`✓ Mediu: ${process.env.NODE_ENV || 'development'}`);
       if (!IS_PROD) {
         console.log(`✓ API: http://localhost:${PORT}/api`);
-        console.log(`✓ Health: http://localhost:${PORT}/api/health`);
       }
     });
+
+    // Backup zilnic Google Drive la ora 02:00
+    scheduleBackup();
   })
   .catch(err => {
     console.error('[FATAL] Nu s-a putut inițializa baza de date:', err.message);

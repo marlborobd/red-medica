@@ -137,15 +137,6 @@ export default function Login() {
           </button>
         </form>
 
-        <div style={{ marginTop: 24, padding: '16px', background: 'var(--bg)', borderRadius: 10, textAlign: 'center' }}>
-          <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 4, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-            Cont demonstrativ
-          </div>
-          <div style={{ fontSize: 13, color: 'var(--text)' }}>
-            <strong>admin@asistenta.ro</strong>
-          </div>
-          <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Parolă: Admin123!</div>
-        </div>
       </div>
     </div>
   );

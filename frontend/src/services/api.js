@@ -41,6 +41,15 @@ export const createVisit = (data) => api.post('/visits', data);
 export const updateVisit = (id, data) => api.put(`/visits/${id}`, data);
 export const deleteVisit = (id) => api.delete(`/visits/${id}`);
 
+// Upload
+export const uploadPhoto = (file) => {
+  const formData = new FormData();
+  formData.append('file', file);
+  return api.post('/upload', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  });
+};
+
 // Reports
 export const getReportSummary = () => api.get('/reports/summary');
 export const getReportMonthly = (year) => api.get('/reports/monthly', { params: { year } });

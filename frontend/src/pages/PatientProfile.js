@@ -13,6 +13,10 @@ function formatDateRo(dateStr) {
   return `${d}.${m}.${y}`;
 }
 
+function parsePoze(pozeStr) {
+  try { return JSON.parse(pozeStr || '[]'); } catch (_) { return []; }
+}
+
 function Toast({ message, type, onClose }) {
   useEffect(() => {
     const t = setTimeout(onClose, 3000);
@@ -72,7 +76,8 @@ export default function PatientProfile() {
   const startEdit = () => {
     setEditForm({
       nume: patient.nume,
-      cnp: patient.cnp,
+      data_nasterii: patient.data_nasterii || '',
+      varsta: patient.varsta || '',
       adresa: patient.adresa || '',
       telefon: patient.telefon || '',
       acord_gdpr: patient.acord_gdpr === 1
@@ -121,7 +126,6 @@ export default function PatientProfile() {
     <>
       {toast && <Toast message={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
 
-      {/* Page header */}
       <div className="page-header">
         <div>
           <div className="page-title">Profil Pacient</div>
@@ -135,14 +139,14 @@ export default function PatientProfile() {
       </div>
 
       <div className="page-body">
-        {/* Profile header card */}
+        {/* Profile header */}
         <div className="profile-header mb-2">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12 }}>
             <div>
               <h2>{patient.nume}</h2>
               <div className="profile-meta">
-                <div className="profile-meta-item">🪪 CNP: <strong style={{ marginLeft: 4, fontFamily: 'monospace' }}>{patient.cnp}</strong></div>
                 <div className="profile-meta-item">🎂 <strong>{patient.varsta ? `${patient.varsta} ani` : 'N/A'}</strong></div>
+                {patient.data_nasterii && <div className="profile-meta-item">📅 {formatDateRo(patient.data_nasterii)}</div>}
                 {patient.telefon && <div className="profile-meta-item">📞 <strong>{patient.telefon}</strong></div>}
                 {patient.adresa && <div className="profile-meta-item">📍 {patient.adresa}</div>}
               </div>
@@ -176,16 +180,10 @@ export default function PatientProfile() {
 
         {/* TABS */}
         <div className="profile-tabs">
-          <button
-            className={`tab-btn ${activeTab === 'date' ? 'active' : ''}`}
-            onClick={() => setActiveTab('date')}
-          >
+          <button className={`tab-btn ${activeTab === 'date' ? 'active' : ''}`} onClick={() => setActiveTab('date')}>
             📋 Date Personale
           </button>
-          <button
-            className={`tab-btn ${activeTab === 'vizite' ? 'active' : ''}`}
-            onClick={() => setActiveTab('vizite')}
-          >
+          <button className={`tab-btn ${activeTab === 'vizite' ? 'active' : ''}`} onClick={() => setActiveTab('vizite')}>
             📅 Vizite <span className="badge badge-blue" style={{ marginLeft: 6, fontSize: 11, padding: '2px 8px' }}>{visits.length}</span>
           </button>
         </div>
@@ -203,7 +201,6 @@ export default function PatientProfile() {
                   <div className="info-list">
                     {[
                       { label: 'Nume', value: <strong>{patient.nume}</strong> },
-                      { label: 'CNP', value: <span style={{ fontFamily: 'monospace' }}>{patient.cnp}</span> },
                       { label: 'Data Nașterii', value: formatDateRo(patient.data_nasterii) },
                       { label: 'Vârstă', value: patient.varsta ? `${patient.varsta} ani` : '—' },
                       { label: 'Adresă', value: patient.adresa || '—' },
@@ -227,44 +224,23 @@ export default function PatientProfile() {
               </div>
 
               <div className="card">
-                <div className="card-header">
-                  <span className="card-title">📊 Sumar Financiar</span>
-                </div>
+                <div className="card-header"><span className="card-title">📊 Sumar Financiar</span></div>
                 <div className="card-body">
                   <div className="info-list">
-                    <div className="info-row">
-                      <span className="info-label">Total Vizite</span>
-                      <span className="info-value"><strong>{visits.length}</strong></span>
-                    </div>
-                    <div className="info-row">
-                      <span className="info-label">Total Facturat</span>
-                      <span className="info-value"><strong>{totalFacturat.toLocaleString('ro-RO')} lei</strong></span>
-                    </div>
-                    <div className="info-row">
-                      <span className="info-label">Total Încasat</span>
-                      <span className="info-value" style={{ color: 'var(--secondary)', fontWeight: 700 }}>{totalIncasat.toLocaleString('ro-RO')} lei</span>
-                    </div>
+                    <div className="info-row"><span className="info-label">Total Vizite</span><span className="info-value"><strong>{visits.length}</strong></span></div>
+                    <div className="info-row"><span className="info-label">Total Facturat</span><span className="info-value"><strong>{totalFacturat.toLocaleString('ro-RO')} lei</strong></span></div>
+                    <div className="info-row"><span className="info-label">Total Încasat</span><span className="info-value" style={{ color: 'var(--secondary)', fontWeight: 700 }}>{totalIncasat.toLocaleString('ro-RO')} lei</span></div>
                     <div className="info-row">
                       <span className="info-label">Rest de Plată</span>
                       <span className="info-value" style={{ color: totalFacturat - totalIncasat > 0 ? 'var(--danger)' : 'var(--secondary)', fontWeight: 700 }}>
                         {(totalFacturat - totalIncasat).toLocaleString('ro-RO')} lei
                       </span>
                     </div>
-                    <div className="info-row">
-                      <span className="info-label">Prima Vizită</span>
-                      <span className="info-value">{visits.length > 0 ? formatDate(visits[visits.length - 1]?.data) : '—'}</span>
-                    </div>
-                    <div className="info-row">
-                      <span className="info-label">Ultima Vizită</span>
-                      <span className="info-value">{visits[0] ? formatDate(visits[0].data) : '—'}</span>
-                    </div>
+                    <div className="info-row"><span className="info-label">Prima Vizită</span><span className="info-value">{visits.length > 0 ? formatDate(visits[visits.length - 1]?.data) : '—'}</span></div>
+                    <div className="info-row"><span className="info-label">Ultima Vizită</span><span className="info-value">{visits[0] ? formatDate(visits[0].data) : '—'}</span></div>
                   </div>
-
                   <div style={{ marginTop: 20 }}>
-                    <button
-                      className="btn btn-primary w-100"
-                      onClick={() => navigate(`/pacienti/${id}/vizita`)}
-                    >
+                    <button className="btn btn-primary w-100" onClick={() => navigate(`/pacienti/${id}/vizita`)}>
                       + Adaugă Vizită Nouă
                     </button>
                   </div>
@@ -280,9 +256,7 @@ export default function PatientProfile() {
             <div className="card">
               <div className="card-header">
                 <span className="card-title">📅 Istoric Vizite ({visits.length})</span>
-                <button className="btn btn-primary btn-sm" onClick={() => navigate(`/pacienti/${id}/vizita`)}>
-                  + Vizită Nouă
-                </button>
+                <button className="btn btn-primary btn-sm" onClick={() => navigate(`/pacienti/${id}/vizita`)}>+ Vizită Nouă</button>
               </div>
               <div className="card-body" style={{ padding: '16px' }}>
                 {visits.length === 0 ? (
@@ -290,107 +264,102 @@ export default function PatientProfile() {
                     <div className="empty-icon">📋</div>
                     <h3>Nicio vizită înregistrată</h3>
                     <p>Adăugați prima vizită pentru acest pacient</p>
-                    <button className="btn btn-primary" onClick={() => navigate(`/pacienti/${id}/vizita`)}>
-                      + Adaugă Prima Vizită
-                    </button>
+                    <button className="btn btn-primary" onClick={() => navigate(`/pacienti/${id}/vizita`)}>+ Adaugă Prima Vizită</button>
                   </div>
                 ) : (
-                  visits.map(v => (
-                    <div
-                      key={v.id}
-                      className="visit-card"
-                      style={{
-                        borderLeftColor: v.stare_pacient && (v.stare_pacient.toLowerCase().includes('grav') || v.stare_pacient.toLowerCase().includes('critic'))
-                          ? 'var(--danger)'
-                          : 'var(--primary)'
-                      }}
-                    >
-                      <div className="visit-header">
-                        <div>
-                          <span className="visit-date">📅 {formatDate(v.data)}</span>
-                          {v.ora && <span style={{ marginLeft: 8, fontSize: 13, color: 'var(--text-secondary)' }}>🕐 {v.ora}</span>}
-                          <span style={{ marginLeft: 8, fontSize: 12, color: 'var(--text-secondary)' }}>👤 {v.angajat_name}</span>
+                  visits.map(v => {
+                    const poze = parsePoze(v.poze);
+                    return (
+                      <div
+                        key={v.id}
+                        className="visit-card"
+                        style={{
+                          borderLeftColor: v.stare_pacient && (v.stare_pacient.toLowerCase().includes('grav') || v.stare_pacient.toLowerCase().includes('critic'))
+                            ? 'var(--danger)' : 'var(--primary)'
+                        }}
+                      >
+                        <div className="visit-header">
+                          <div>
+                            <span className="visit-date">📅 {formatDate(v.data)}</span>
+                            {v.ora && <span style={{ marginLeft: 8, fontSize: 13, color: 'var(--text-secondary)' }}>🕐 {v.ora}</span>}
+                            <span style={{ marginLeft: 8, fontSize: 12, color: 'var(--text-secondary)' }}>👤 {v.angajat_name}</span>
+                          </div>
+                          <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
+                            {v.stare_pacient && <span className={`badge ${stareColor(v.stare_pacient)}`}>{v.stare_pacient}</span>}
+                            {poze.length > 0 && <span className="badge badge-blue" title="Conține fotografii">📷 {poze.length}</span>}
+                            <button className="btn btn-ghost btn-sm btn-icon" onClick={() => setExpandedVisit(expandedVisit === v.id ? null : v.id)} title={expandedVisit === v.id ? 'Restrânge' : 'Extinde'}>
+                              {expandedVisit === v.id ? '▲' : '▼'}
+                            </button>
+                            <button className="btn btn-ghost btn-sm btn-icon" onClick={() => navigate(`/pacienti/${id}/vizita/${v.id}`)} title="Editează vizita">✏️</button>
+                            <button className="btn btn-danger btn-sm btn-icon" onClick={() => setDeleteVisitId(v.id)} title="Șterge vizita">🗑️</button>
+                          </div>
                         </div>
-                        <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
-                          {v.stare_pacient && (
-                            <span className={`badge ${stareColor(v.stare_pacient)}`}>{v.stare_pacient}</span>
+
+                        {/* Sumar mereu vizibil */}
+                        <div className="visit-details">
+                          {v.diagnostic && <div className="visit-detail"><span className="label">Diagnostic: </span><span className="value">{v.diagnostic}</span></div>}
+                          {v.tensiune && <div className="visit-detail"><span className="label">Tensiune: </span><span className="value">{v.tensiune}</span></div>}
+                          {v.temperatura && <div className="visit-detail"><span className="label">Temp.: </span><span className="value">{v.temperatura}°C</span></div>}
+                          {Number(v.suma_incasata) > 0 && (
+                            <div className="visit-detail">
+                              <span className="label">Încasat: </span>
+                              <span className="value" style={{ color: 'var(--secondary)', fontWeight: 700 }}>{Number(v.suma_incasata).toLocaleString('ro-RO')} lei</span>
+                            </div>
                           )}
-                          <button
-                            className="btn btn-ghost btn-sm btn-icon"
-                            onClick={() => setExpandedVisit(expandedVisit === v.id ? null : v.id)}
-                            title={expandedVisit === v.id ? 'Restrânge' : 'Extinde'}
-                          >
-                            {expandedVisit === v.id ? '▲' : '▼'}
-                          </button>
-                          <button
-                            className="btn btn-ghost btn-sm btn-icon"
-                            onClick={() => navigate(`/pacienti/${id}/vizita/${v.id}`)}
-                            title="Editează vizita"
-                          >
-                            ✏️
-                          </button>
-                          <button
-                            className="btn btn-danger btn-sm btn-icon"
-                            onClick={() => setDeleteVisitId(v.id)}
-                            title="Șterge vizita"
-                          >
-                            🗑️
-                          </button>
                         </div>
-                      </div>
 
-                      {/* Summary always visible */}
-                      <div className="visit-details">
-                        {v.diagnostic && (
-                          <div className="visit-detail">
-                            <span className="label">Diagnostic: </span>
-                            <span className="value">{v.diagnostic}</span>
-                          </div>
-                        )}
-                        {v.tensiune && (
-                          <div className="visit-detail">
-                            <span className="label">Tensiune: </span>
-                            <span className="value">{v.tensiune}</span>
-                          </div>
-                        )}
-                        {v.temperatura && (
-                          <div className="visit-detail">
-                            <span className="label">Temp.: </span>
-                            <span className="value">{v.temperatura}°C</span>
-                          </div>
-                        )}
-                        {Number(v.suma_incasata) > 0 && (
-                          <div className="visit-detail">
-                            <span className="label">Încasat: </span>
-                            <span className="value" style={{ color: 'var(--secondary)', fontWeight: 700 }}>
-                              {Number(v.suma_incasata).toLocaleString('ro-RO')} lei
-                            </span>
-                          </div>
-                        )}
-                      </div>
+                        {/* Detalii extinse */}
+                        {expandedVisit === v.id && (
+                          <div style={{ marginTop: 14, paddingTop: 14, borderTop: '1px dashed var(--border)' }}>
+                            <div className="visit-details">
+                              {v.tratament && <div className="visit-detail"><span className="label">Tratament: </span><span className="value">{v.tratament}</span></div>}
+                              {v.medicamente && <div className="visit-detail"><span className="label">Medicamente: </span><span className="value">{v.medicamente}</span></div>}
+                              {v.cass && <div className="visit-detail"><span className="label">CASS: </span><span className="value">{v.cass}</span></div>}
+                              {v.zile_cass > 0 && <div className="visit-detail"><span className="label">Zile CASS: </span><span className="value">{v.zile_cass}</span></div>}
+                              {v.perioada_tratament_inceput && (
+                                <div className="visit-detail">
+                                  <span className="label">Perioadă: </span>
+                                  <span className="value">{formatDate(v.perioada_tratament_inceput)} — {formatDate(v.perioada_tratament_sfarsit)}</span>
+                                </div>
+                              )}
+                              {v.servicii_efectuate && <div className="visit-detail" style={{ gridColumn: '1/-1' }}><span className="label">Servicii: </span><span className="value">{v.servicii_efectuate}</span></div>}
+                              {v.observatii && <div className="visit-detail" style={{ gridColumn: '1/-1' }}><span className="label">Observații: </span><span className="value">{v.observatii}</span></div>}
+                              {Number(v.suma_de_plata) > 0 && <div className="visit-detail"><span className="label">Facturat: </span><span className="value">{Number(v.suma_de_plata).toLocaleString('ro-RO')} lei</span></div>}
+                            </div>
 
-                      {/* Expanded details */}
-                      {expandedVisit === v.id && (
-                        <div style={{ marginTop: 14, paddingTop: 14, borderTop: '1px dashed var(--border)' }}>
-                          <div className="visit-details">
-                            {v.tratament && <div className="visit-detail"><span className="label">Tratament: </span><span className="value">{v.tratament}</span></div>}
-                            {v.medicamente && <div className="visit-detail"><span className="label">Medicamente: </span><span className="value">{v.medicamente}</span></div>}
-                            {v.cass && <div className="visit-detail"><span className="label">CASS: </span><span className="value">{v.cass}</span></div>}
-                            {v.zile_cass > 0 && <div className="visit-detail"><span className="label">Zile CASS: </span><span className="value">{v.zile_cass}</span></div>}
-                            {v.perioada_tratament_inceput && (
-                              <div className="visit-detail">
-                                <span className="label">Perioadă: </span>
-                                <span className="value">{formatDate(v.perioada_tratament_inceput)} — {formatDate(v.perioada_tratament_sfarsit)}</span>
+                            {/* Poze rețete */}
+                            {poze.length > 0 && (
+                              <div style={{ marginTop: 12 }}>
+                                <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 8 }}>
+                                  📷 Fotografii / Rețete ({poze.length})
+                                </div>
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                                  {poze.map((url, i) => (
+                                    <a key={i} href={url} target="_blank" rel="noopener noreferrer" title="Deschide fotografia">
+                                      <img
+                                        src={url}
+                                        alt={`Fotografie ${i + 1}`}
+                                        style={{
+                                          width: 72, height: 72,
+                                          objectFit: 'cover',
+                                          borderRadius: 8,
+                                          border: '2px solid var(--border)',
+                                          transition: 'transform 0.2s',
+                                          cursor: 'pointer'
+                                        }}
+                                        onMouseOver={e => e.target.style.transform = 'scale(1.08)'}
+                                        onMouseOut={e => e.target.style.transform = 'scale(1)'}
+                                      />
+                                    </a>
+                                  ))}
+                                </div>
                               </div>
                             )}
-                            {v.servicii_efectuate && <div className="visit-detail" style={{ gridColumn: '1/-1' }}><span className="label">Servicii: </span><span className="value">{v.servicii_efectuate}</span></div>}
-                            {v.observatii && <div className="visit-detail" style={{ gridColumn: '1/-1' }}><span className="label">Observații: </span><span className="value">{v.observatii}</span></div>}
-                            {Number(v.suma_de_plata) > 0 && <div className="visit-detail"><span className="label">Facturat: </span><span className="value">{Number(v.suma_de_plata).toLocaleString('ro-RO')} lei</span></div>}
                           </div>
-                        </div>
-                      )}
-                    </div>
-                  ))
+                        )}
+                      </div>
+                    );
+                  })
                 )}
               </div>
             </div>
@@ -398,13 +367,13 @@ export default function PatientProfile() {
         )}
       </div>
 
-      {/* Edit patient modal */}
+      {/* Modal editare pacient */}
       {editMode && (
         <div className="modal-overlay" onClick={() => setEditMode(false)}>
           <div className="modal" onClick={e => e.stopPropagation()}>
             <div className="modal-header">
               <span className="modal-title">✏️ Editează Pacient</span>
-              <button className="modal-close" onClick={() => setEditMode(false)} aria-label="Închide">✕</button>
+              <button className="modal-close" onClick={() => setEditMode(false)}>✕</button>
             </div>
             <div className="modal-body">
               {editError && <div className="alert alert-danger mb-2">⚠️ {editError}</div>}
@@ -412,6 +381,14 @@ export default function PatientProfile() {
                 <div className="form-group">
                   <label className="form-label">Nume <span className="required">*</span></label>
                   <input className="form-control" value={editForm.nume || ''} onChange={e => setEditForm(p => ({ ...p, nume: e.target.value }))} />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Data Nașterii</label>
+                  <input className="form-control" type="date" value={editForm.data_nasterii || ''} onChange={e => setEditForm(p => ({ ...p, data_nasterii: e.target.value }))} />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Vârstă (ani)</label>
+                  <input className="form-control" type="number" min="0" max="150" value={editForm.varsta || ''} onChange={e => setEditForm(p => ({ ...p, varsta: e.target.value }))} />
                 </div>
                 <div className="form-group">
                   <label className="form-label">Adresă</label>
@@ -437,20 +414,19 @@ export default function PatientProfile() {
         </div>
       )}
 
-      {/* Delete visit modal */}
+      {/* Modal ștergere vizită */}
       {deleteVisitId && (
         <div className="modal-overlay" onClick={() => setDeleteVisitId(null)}>
           <div className="modal" onClick={e => e.stopPropagation()}>
             <div className="modal-header">
               <span className="modal-title">⚠️ Șterge Vizita</span>
-              <button className="modal-close" onClick={() => setDeleteVisitId(null)} aria-label="Închide">✕</button>
+              <button className="modal-close" onClick={() => setDeleteVisitId(null)}>✕</button>
             </div>
             <div className="modal-body">
               <div className="alert alert-danger">
                 <span>🗑️</span>
                 <div>
-                  <strong>Sigur doriți să ștergeți această vizită?</strong>
-                  <br />
+                  <strong>Sigur doriți să ștergeți această vizită?</strong><br />
                   <small>Acțiunea este ireversibilă și toate datele vizitei vor fi pierdute.</small>
                 </div>
               </div>

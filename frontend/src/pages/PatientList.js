@@ -49,7 +49,6 @@ export default function PatientList() {
 
   return (
     <>
-      {/* Toast */}
       {toast && (
         <div className="toast-container">
           <div className={`toast ${toast.type}`}>{toast.msg}</div>
@@ -67,7 +66,6 @@ export default function PatientList() {
       </div>
 
       <div className="page-body">
-        {/* Search bar */}
         <div className="card mb-3">
           <div className="card-body" style={{ padding: '14px 16px' }}>
             <div className="search-bar">
@@ -75,7 +73,7 @@ export default function PatientList() {
                 <span className="search-icon">🔍</span>
                 <input
                   className="search-input"
-                  placeholder="Căutare după nume, CNP, telefon..."
+                  placeholder="Căutare după nume sau telefon..."
                   value={search}
                   onChange={e => setSearch(e.target.value)}
                   autoComplete="off"
@@ -109,9 +107,6 @@ export default function PatientList() {
         ) : (
           <>
             {/* MOBILE CARDS */}
-            <div className="patient-card-mobile" style={{ display: 'none' }}>
-              {/* placeholder — real ones below via CSS */}
-            </div>
             <div>
               {patients.map((p) => (
                 <div
@@ -135,9 +130,11 @@ export default function PatientList() {
                     <div className="pcm-info">
                       📞 <strong>{p.telefon || '—'}</strong>
                     </div>
-                    <div className="pcm-info" style={{ gridColumn: '1 / -1', fontSize: 12 }}>
-                      🪪 {p.cnp}
-                    </div>
+                    {p.data_nasterii && (
+                      <div className="pcm-info" style={{ gridColumn: '1 / -1', fontSize: 12 }}>
+                        📅 {formatDate(p.data_nasterii)}
+                      </div>
+                    )}
                     {p.adresa && (
                       <div className="pcm-info" style={{ gridColumn: '1 / -1', fontSize: 12 }}>
                         📍 {p.adresa}
@@ -145,23 +142,14 @@ export default function PatientList() {
                     )}
                   </div>
                   <div className="pcm-actions" onClick={e => e.stopPropagation()}>
-                    <button
-                      className="btn btn-primary btn-sm"
-                      onClick={() => navigate(`/pacienti/${p.id}`)}
-                    >
+                    <button className="btn btn-primary btn-sm" onClick={() => navigate(`/pacienti/${p.id}`)}>
                       👁️ Profil
                     </button>
-                    <button
-                      className="btn btn-secondary btn-sm"
-                      onClick={() => navigate(`/pacienti/${p.id}/vizita`)}
-                    >
+                    <button className="btn btn-secondary btn-sm" onClick={() => navigate(`/pacienti/${p.id}/vizita`)}>
                       📋 Vizită
                     </button>
                     {isAdmin && (
-                      <button
-                        className="btn btn-danger btn-sm"
-                        onClick={() => setDeleteConfirm(p)}
-                      >
+                      <button className="btn btn-danger btn-sm" onClick={() => setDeleteConfirm(p)}>
                         🗑️
                       </button>
                     )}
@@ -178,7 +166,6 @@ export default function PatientList() {
                     <tr>
                       <th>#</th>
                       <th>Nume</th>
-                      <th>CNP</th>
                       <th>Data Nașterii</th>
                       <th>Vârstă</th>
                       <th>Telefon</th>
@@ -200,7 +187,6 @@ export default function PatientList() {
                             {p.nume}
                           </button>
                         </td>
-                        <td style={{ fontFamily: 'monospace', fontSize: 12 }}>{p.cnp}</td>
                         <td>{p.data_nasterii ? formatDate(p.data_nasterii) : '—'}</td>
                         <td>{p.varsta ? <span className="badge badge-blue">{p.varsta} ani</span> : '—'}</td>
                         <td>{p.telefon || '—'}</td>
@@ -230,13 +216,12 @@ export default function PatientList() {
         )}
       </div>
 
-      {/* Delete confirmation modal */}
       {deleteConfirm && (
         <div className="modal-overlay" onClick={() => setDeleteConfirm(null)}>
           <div className="modal" onClick={e => e.stopPropagation()}>
             <div className="modal-header">
               <span className="modal-title">⚠️ Confirmare Ștergere</span>
-              <button className="modal-close" onClick={() => setDeleteConfirm(null)} aria-label="Închide">✕</button>
+              <button className="modal-close" onClick={() => setDeleteConfirm(null)}>✕</button>
             </div>
             <div className="modal-body">
               <div className="alert alert-danger">

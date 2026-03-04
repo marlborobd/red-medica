@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getPatient, createVisit, getVisit, updateVisit } from '../services/api';
+import { getPatient, createVisit, getVisit, updateVisit, uploadPhoto } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 
 const SERVICII_OPTIONS = [
@@ -31,6 +31,9 @@ export default function AddVisit() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [poze, setPoze] = useState([]);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const fileInputRef = useRef(null);
 
   const now = new Date();
   const todayStr = now.toISOString().split('T')[0];
@@ -65,6 +68,7 @@ export default function AddVisit() {
           observatii: v.observatii || '', suma_de_plata: v.suma_de_plata || '',
           suma_incasata: v.suma_incasata || ''
         });
+        try { setPoze(JSON.parse(v.poze || '[]')); } catch (_) { setPoze([]); }
       }
     } catch {
       navigate(`/pacienti/${patientId}`);
@@ -88,14 +92,38 @@ export default function AddVisit() {
     setForm(prev => ({ ...prev, servicii_efectuate: updated.join(', ') }));
   };
 
+  // ===== Upload poze =====
+  const handlePhotoUpload = async (e) => {
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+    setUploadingPhoto(true);
+    setError('');
+    try {
+      for (const file of files) {
+        const { data } = await uploadPhoto(file);
+        setPoze(prev => [...prev, data.url]);
+      }
+    } catch (err) {
+      setError(err.response?.data?.error || 'Eroare la încărcarea fotografiei. Verificați configurarea Cloudinary.');
+    } finally {
+      setUploadingPhoto(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  const removePhoto = (idx) => {
+    setPoze(prev => prev.filter((_, i) => i !== idx));
+  };
+
   const handleSave = async () => {
     setSaving(true);
     setError('');
     try {
+      const payload = { ...form, poze: JSON.stringify(poze) };
       if (isEdit) {
-        await updateVisit(visitId, form);
+        await updateVisit(visitId, payload);
       } else {
-        await createVisit({ ...form, patient_id: parseInt(patientId) });
+        await createVisit({ ...payload, patient_id: parseInt(patientId) });
       }
       navigate(`/pacienti/${patientId}`);
     } catch (err) {
@@ -166,28 +194,11 @@ export default function AddVisit() {
             <div className="form-grid">
               <div className="form-group">
                 <label className="form-label">Tensiune Arterială</label>
-                <input
-                  name="tensiune"
-                  className="form-control"
-                  placeholder="ex: 120/80 mmHg"
-                  value={form.tensiune}
-                  onChange={handleChange}
-                />
+                <input name="tensiune" className="form-control" placeholder="ex: 120/80 mmHg" value={form.tensiune} onChange={handleChange} />
               </div>
               <div className="form-group">
                 <label className="form-label">Temperatură (°C)</label>
-                <input
-                  name="temperatura"
-                  type="number"
-                  step="0.1"
-                  min="34"
-                  max="42"
-                  className="form-control"
-                  placeholder="ex: 36.7"
-                  value={form.temperatura}
-                  onChange={handleChange}
-                  inputMode="decimal"
-                />
+                <input name="temperatura" type="number" step="0.1" min="34" max="42" className="form-control" placeholder="ex: 36.7" value={form.temperatura} onChange={handleChange} inputMode="decimal" />
               </div>
               <div className="form-group form-full">
                 <label className="form-label">Stare Pacient</label>
@@ -206,48 +217,90 @@ export default function AddVisit() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
               <div className="form-group">
                 <label className="form-label">Diagnostic</label>
-                <textarea
-                  name="diagnostic"
-                  className="form-control"
-                  rows={3}
-                  placeholder="Diagnosticul pacientului..."
-                  value={form.diagnostic}
-                  onChange={handleChange}
-                />
+                <textarea name="diagnostic" className="form-control" rows={3} placeholder="Diagnosticul pacientului..." value={form.diagnostic} onChange={handleChange} />
               </div>
               <div className="form-group">
                 <label className="form-label">Tratament</label>
-                <textarea
-                  name="tratament"
-                  className="form-control"
-                  rows={3}
-                  placeholder="Tratamentul prescris și administrat..."
-                  value={form.tratament}
-                  onChange={handleChange}
-                />
+                <textarea name="tratament" className="form-control" rows={3} placeholder="Tratamentul prescris și administrat..." value={form.tratament} onChange={handleChange} />
               </div>
               <div className="form-group">
                 <label className="form-label">Medicamente</label>
-                <textarea
-                  name="medicamente"
-                  className="form-control"
-                  rows={3}
-                  placeholder="Lista medicamentelor (denumire, doză, frecvență)..."
-                  value={form.medicamente}
-                  onChange={handleChange}
-                />
+                <textarea name="medicamente" className="form-control" rows={3} placeholder="Lista medicamentelor (denumire, doză, frecvență)..." value={form.medicamente} onChange={handleChange} />
               </div>
               <div className="form-group">
                 <label className="form-label">Observații</label>
-                <textarea
-                  name="observatii"
-                  className="form-control"
-                  rows={3}
-                  placeholder="Observații suplimentare despre starea pacientului..."
-                  value={form.observatii}
-                  onChange={handleChange}
-                />
+                <textarea name="observatii" className="form-control" rows={3} placeholder="Observații suplimentare despre starea pacientului..." value={form.observatii} onChange={handleChange} />
               </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Poze rețete */}
+        <div className="card mb-3">
+          <div className="card-header"><span className="card-title">📷 Poze Rețete / Documente</span></div>
+          <div className="card-body">
+            {/* Thumbnails */}
+            {poze.length > 0 && (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginBottom: 14 }}>
+                {poze.map((url, idx) => (
+                  <div key={idx} style={{ position: 'relative' }}>
+                    <img
+                      src={url}
+                      alt={`Poza ${idx + 1}`}
+                      onClick={() => window.open(url, '_blank')}
+                      style={{
+                        width: 80, height: 80,
+                        objectFit: 'cover',
+                        borderRadius: 8,
+                        border: '2px solid var(--border)',
+                        cursor: 'pointer'
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => removePhoto(idx)}
+                      title="Șterge fotografia"
+                      style={{
+                        position: 'absolute', top: -7, right: -7,
+                        background: 'var(--danger)', color: 'white',
+                        border: 'none', borderRadius: '50%',
+                        width: 22, height: 22, fontSize: 12,
+                        cursor: 'pointer', display: 'flex',
+                        alignItems: 'center', justifyContent: 'center',
+                        padding: 0, fontWeight: 700
+                      }}
+                    >✕</button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Buton upload — pe mobil deschide camera direct */}
+            <label style={{ display: 'block', cursor: uploadingPhoto ? 'wait' : 'pointer' }}>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                capture="environment"
+                multiple
+                style={{ display: 'none' }}
+                onChange={handlePhotoUpload}
+                disabled={uploadingPhoto}
+              />
+              <div
+                className={`btn ${uploadingPhoto ? 'btn-ghost' : 'btn-secondary'}`}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 8,
+                  pointerEvents: uploadingPhoto ? 'none' : 'auto'
+                }}
+              >
+                {uploadingPhoto
+                  ? <><div className="loading-spinner" style={{ width: 18, height: 18, borderWidth: 2 }} /> Se încarcă fotografia...</>
+                  : '📷 Fotografiați Rețeta / Adaugă Poze'}
+              </div>
+            </label>
+            <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 6 }}>
+              Pe mobil: apasă pentru a fotografia direct cu camera. Pe desktop: selectați fișierul imagine.
             </div>
           </div>
         </div>
@@ -271,13 +324,7 @@ export default function AddVisit() {
             </div>
             <div className="form-group">
               <label className="form-label">Servicii selectate / alte servicii</label>
-              <input
-                name="servicii_efectuate"
-                className="form-control"
-                placeholder="Editați lista sau adăugați alte servicii..."
-                value={form.servicii_efectuate}
-                onChange={handleChange}
-              />
+              <input name="servicii_efectuate" className="form-control" placeholder="Editați lista sau adăugați alte servicii..." value={form.servicii_efectuate} onChange={handleChange} />
             </div>
           </div>
         </div>
@@ -289,13 +336,7 @@ export default function AddVisit() {
             <div className="form-grid">
               <div className="form-group form-full">
                 <label className="form-label">CASS</label>
-                <input
-                  name="cass"
-                  className="form-control"
-                  placeholder="Informații CASS..."
-                  value={form.cass}
-                  onChange={handleChange}
-                />
+                <input name="cass" className="form-control" placeholder="Informații CASS..." value={form.cass} onChange={handleChange} />
               </div>
               <div className="form-group">
                 <label className="form-label">Perioadă Tratament — Început</label>
@@ -307,16 +348,7 @@ export default function AddVisit() {
               </div>
               <div className="form-group">
                 <label className="form-label">Zile CASS</label>
-                <input
-                  name="zile_cass"
-                  type="number"
-                  min="0"
-                  className="form-control"
-                  placeholder="0"
-                  value={form.zile_cass}
-                  onChange={handleChange}
-                  inputMode="numeric"
-                />
+                <input name="zile_cass" type="number" min="0" className="form-control" placeholder="0" value={form.zile_cass} onChange={handleChange} inputMode="numeric" />
               </div>
             </div>
           </div>
@@ -329,31 +361,11 @@ export default function AddVisit() {
             <div className="form-grid">
               <div className="form-group">
                 <label className="form-label">Sumă de Plată (lei)</label>
-                <input
-                  name="suma_de_plata"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  className="form-control"
-                  placeholder="0.00"
-                  value={form.suma_de_plata}
-                  onChange={handleChange}
-                  inputMode="decimal"
-                />
+                <input name="suma_de_plata" type="number" step="0.01" min="0" className="form-control" placeholder="0.00" value={form.suma_de_plata} onChange={handleChange} inputMode="decimal" />
               </div>
               <div className="form-group">
                 <label className="form-label">Sumă Încasată (lei)</label>
-                <input
-                  name="suma_incasata"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  className="form-control"
-                  placeholder="0.00"
-                  value={form.suma_incasata}
-                  onChange={handleChange}
-                  inputMode="decimal"
-                />
+                <input name="suma_incasata" type="number" step="0.01" min="0" className="form-control" placeholder="0.00" value={form.suma_incasata} onChange={handleChange} inputMode="decimal" />
               </div>
             </div>
             {form.suma_de_plata && form.suma_incasata && rest > 0 && (
@@ -362,15 +374,13 @@ export default function AddVisit() {
               </div>
             )}
             {form.suma_de_plata && form.suma_incasata && rest <= 0 && Number(form.suma_de_plata) > 0 && (
-              <div className="alert alert-success mt-2">
-                ✓ Plata este completă
-              </div>
+              <div className="alert alert-success mt-2">✓ Plata este completă</div>
             )}
           </div>
         </div>
       </div>
 
-      {/* Sticky action footer */}
+      {/* Sticky footer */}
       <div style={{
         position: 'fixed',
         bottom: 'var(--bottom-nav-height, 0)',
@@ -384,20 +394,10 @@ export default function AddVisit() {
         zIndex: 50,
         boxShadow: '0 -2px 12px rgba(0,0,0,0.08)'
       }}>
-        <button
-          type="button"
-          className="btn btn-ghost"
-          onClick={() => navigate(`/pacienti/${patientId}`)}
-        >
+        <button type="button" className="btn btn-ghost" onClick={() => navigate(`/pacienti/${patientId}`)}>
           Anulare
         </button>
-        <button
-          type="button"
-          className="btn btn-primary"
-          onClick={handleSave}
-          disabled={saving}
-          style={{ minWidth: 180 }}
-        >
+        <button type="button" className="btn btn-primary" onClick={handleSave} disabled={saving} style={{ minWidth: 180 }}>
           {saving
             ? <><div className="loading-spinner" style={{ width: 18, height: 18, borderWidth: 2 }} /> Se salvează...</>
             : `💾 ${isEdit ? 'Actualizează Vizita' : 'Salvează Vizita'}`}
