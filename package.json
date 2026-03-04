@@ -4,7 +4,7 @@
   "description": "Asistență Medicală la Domiciliu - Red Medica",
   "private": true,
   "engines": {
-    "node": "23.x",
+    "node": ">=18.0.0",
     "npm": ">=9.0.0"
   },
   "scripts": {
