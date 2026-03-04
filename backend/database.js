@@ -1,4 +1,4 @@
-const Database = require('better-sqlite3');
+const initSqlJs = require('sql.js');
 const bcrypt = require('bcryptjs');
 const path = require('path');
 const fs = require('fs');
@@ -8,30 +8,117 @@ const DB_PATH = process.env.DATABASE_PATH
   ? path.resolve(process.env.DATABASE_PATH)
   : path.join(__dirname, 'asistenta.db');
 
-let db;
+let sqlJsDb = null; // instanța internă sql.js
+
+// ===== Persistență pe disc =====
+// sql.js lucrează in-memory; la fiecare scriere exportăm și salvăm pe disc
+function saveDb() {
+  if (!sqlJsDb) return;
+  try {
+    const data = sqlJsDb.export(); // Uint8Array cu conținutul SQLite
+    const dir = path.dirname(DB_PATH);
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(DB_PATH, Buffer.from(data));
+  } catch (err) {
+    console.error('[DB] Eroare la salvare pe disc:', err.message);
+  }
+}
+
+// ===== Wrapper Statement — API identic cu better-sqlite3 =====
+// Rutele existente folosesc .get(), .all(), .run() fără modificări
+class Statement {
+  constructor(sql) {
+    this._sql = sql;
+  }
+
+  // Returnează primul rând sau undefined
+  get(...args) {
+    const params = args.flat().map(v => (v === undefined ? null : v));
+    const stmt = sqlJsDb.prepare(this._sql);
+    try {
+      if (params.length > 0) stmt.bind(params);
+      return stmt.step() ? stmt.getAsObject() : undefined;
+    } finally {
+      stmt.free();
+    }
+  }
+
+  // Returnează toate rândurile ca array de obiecte
+  all(...args) {
+    const params = args.flat().map(v => (v === undefined ? null : v));
+    const stmt = sqlJsDb.prepare(this._sql);
+    try {
+      if (params.length > 0) stmt.bind(params);
+      const rows = [];
+      while (stmt.step()) rows.push(stmt.getAsObject());
+      return rows;
+    } finally {
+      stmt.free();
+    }
+  }
+
+  // Execută INSERT/UPDATE/DELETE și salvează pe disc
+  run(...args) {
+    const params = args.flat().map(v => (v === undefined ? null : v));
+    sqlJsDb.run(this._sql, params.length > 0 ? params : undefined);
+    // Obținem ID-ul ultimului INSERT (0 pentru UPDATE/DELETE)
+    const idResult = sqlJsDb.exec('SELECT last_insert_rowid()');
+    const lastInsertRowid = idResult.length > 0 ? idResult[0].values[0][0] : 0;
+    saveDb(); // persistare imediată după fiecare scriere
+    return { lastInsertRowid };
+  }
+}
+
+// ===== Obiect db — interfață publică compatibilă cu better-sqlite3 =====
+const db = {
+  // exec(): pentru DDL cu mai multe instrucțiuni (CREATE TABLE etc.)
+  exec(sql) {
+    sqlJsDb.exec(sql);
+    return this;
+  },
+  // pragma(): setări SQLite
+  pragma(str) {
+    try { sqlJsDb.run('PRAGMA ' + str); } catch (_) {}
+    return this;
+  },
+  // prepare(): returnează un Statement wrapper
+  prepare(sql) {
+    return new Statement(sql);
+  }
+};
 
 function getDb() {
-  if (!db) {
-    // Asigură că directorul există (important pentru Railway volumes)
-    const dbDir = path.dirname(DB_PATH);
-    if (!fs.existsSync(dbDir)) {
-      fs.mkdirSync(dbDir, { recursive: true });
-      console.log(`✓ Director creat: ${dbDir}`);
-    }
-
-    db = new Database(DB_PATH);
-    db.pragma('journal_mode = WAL');
-    db.pragma('foreign_keys = ON');
-    db.pragma('synchronous = NORMAL');
-    console.log(`✓ Baza de date: ${DB_PATH}`);
-  }
+  if (!sqlJsDb) throw new Error('Baza de date nu este inițializată');
   return db;
 }
 
-function initDatabase() {
-  const database = getDb();
+// ===== Inițializare asincronă (sql.js încarcă WebAssembly) =====
+async function initDatabase() {
+  // Asigură directorul
+  const dbDir = path.dirname(DB_PATH);
+  if (!fs.existsSync(dbDir)) {
+    fs.mkdirSync(dbDir, { recursive: true });
+    console.log(`✓ Director creat: ${dbDir}`);
+  }
 
-  database.exec(`
+  // Inițializare sql.js cu calea explicită spre fișierul wasm
+  const SQL = await initSqlJs({
+    locateFile: filename =>
+      path.join(__dirname, 'node_modules', 'sql.js', 'dist', filename)
+  });
+
+  // Încarcă baza de date existentă sau creează una nouă
+  if (fs.existsSync(DB_PATH)) {
+    const fileBuffer = fs.readFileSync(DB_PATH);
+    sqlJsDb = new SQL.Database(fileBuffer);
+    console.log(`✓ Baza de date încărcată: ${DB_PATH}`);
+  } else {
+    sqlJsDb = new SQL.Database();
+    console.log(`✓ Baza de date nouă: ${DB_PATH}`);
+  }
+
+  // Creare tabele (suportă multiple instrucțiuni separate prin ;)
+  db.exec(`
     CREATE TABLE IF NOT EXISTS users (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       email TEXT UNIQUE NOT NULL,
@@ -87,18 +174,16 @@ function initDatabase() {
   const adminPassword = process.env.ADMIN_PASSWORD || 'Admin123!';
   const adminName = process.env.ADMIN_NAME || 'Administrator';
 
-  const adminExists = database
-    .prepare('SELECT id FROM users WHERE email = ?')
-    .get(adminEmail);
-
+  const adminExists = db.prepare('SELECT id FROM users WHERE email = ?').get(adminEmail);
   if (!adminExists) {
     const hashedPassword = bcrypt.hashSync(adminPassword, 10);
-    database
-      .prepare('INSERT INTO users (email, password, name, role) VALUES (?, ?, ?, ?)')
+    db.prepare('INSERT INTO users (email, password, name, role) VALUES (?, ?, ?, ?)')
       .run(adminEmail, hashedPassword, adminName, 'admin');
     console.log(`✓ Admin creat: ${adminEmail}`);
   }
 
+  // Salvare stare inițială pe disc
+  saveDb();
   console.log('✓ Baza de date inițializată cu succes');
 }
 

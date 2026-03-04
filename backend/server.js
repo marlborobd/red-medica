@@ -16,7 +16,7 @@ const IS_PROD = process.env.NODE_ENV === 'production';
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
-// CORS: în development permite localhost:3000, în producție nu e necesar (same origin)
+// CORS: în development permite localhost:3000, în producție same origin
 if (!IS_PROD) {
   app.use(cors({
     origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
@@ -26,8 +26,7 @@ if (!IS_PROD) {
   app.use(cors({ credentials: true }));
 }
 
-// ===== Health check (primul endpoint, fără dependență de DB) =====
-// Railway bate acest endpoint pentru a verifica că serverul e activ
+// ===== Health check (fără dependență de DB, Railway îl bate primul) =====
 app.get('/api/health', (req, res) => {
   res.status(200).json({
     status: 'ok',
@@ -47,7 +46,6 @@ app.use('/api/reports', reportRoutes);
 if (IS_PROD) {
   const frontendBuildPath = path.join(__dirname, '..', 'frontend', 'build');
 
-  // Servire fișiere statice React
   app.use(express.static(frontendBuildPath, {
     maxAge: '1y',
     etag: true
@@ -70,22 +68,20 @@ app.use((err, req, res, next) => {
 });
 
 // ===== Start server =====
-// Serverul ascultă ÎNAINTE de inițializarea DB
-// Astfel Railway health check poate răspunde imediat
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`✓ Server pornit pe portul ${PORT}`);
-  console.log(`✓ Mediu: ${process.env.NODE_ENV || 'development'}`);
-  if (!IS_PROD) {
-    console.log(`✓ API: http://localhost:${PORT}/api`);
-    console.log(`✓ Health: http://localhost:${PORT}/api/health`);
-  }
-
-  // Inițializare DB după ce serverul a pornit
-  try {
-    initDatabase();
-    console.log('✓ Baza de date inițializată cu succes');
-  } catch (err) {
+// initDatabase() este async (sql.js încarcă WebAssembly)
+// Serverul pornește doar după ce DB este gata
+initDatabase()
+  .then(() => {
+    app.listen(PORT, '0.0.0.0', () => {
+      console.log(`✓ Server pornit pe portul ${PORT}`);
+      console.log(`✓ Mediu: ${process.env.NODE_ENV || 'development'}`);
+      if (!IS_PROD) {
+        console.log(`✓ API: http://localhost:${PORT}/api`);
+        console.log(`✓ Health: http://localhost:${PORT}/api/health`);
+      }
+    });
+  })
+  .catch(err => {
     console.error('[FATAL] Nu s-a putut inițializa baza de date:', err.message);
     process.exit(1);
-  }
-});
+  });
