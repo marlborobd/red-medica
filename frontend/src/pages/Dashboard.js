@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { getReportSummary, getPatients, getVisitsDetail } from '../services/api';
+import { getReportSummary, getPatients, getVisitsDetail, getPendingPatients, updatePatientStatus, getEmployees, redistribuiePatient } from '../services/api';
 
 export default function Dashboard() {
   const { user, isAdmin } = useAuth();
@@ -9,9 +9,57 @@ export default function Dashboard() {
   const [stats, setStats] = useState(null);
   const [recentVisits, setRecentVisits] = useState([]);
   const [recentPatients, setRecentPatients] = useState([]);
+  const [pendingPatients, setPendingPatients] = useState([]);
+  const [employees, setEmployees] = useState([]);
+  const [redistribuieId, setRedistribuieId] = useState(null);
+  const [redistribuieTargetId, setRedistribuieTargetId] = useState('');
   const [loading, setLoading] = useState(true);
+  const [pendingLoading, setPendingLoading] = useState(false);
+  const [toast, setToast] = useState(null);
+
+  const showToast = (msg, type = 'success') => {
+    setToast({ msg, type });
+    setTimeout(() => setToast(null), 3000);
+  };
 
   useEffect(() => { loadData(); }, []);
+
+  const loadPending = useCallback(async () => {
+    setPendingLoading(true);
+    try {
+      const res = await getPendingPatients();
+      setPendingPatients(res.data);
+    } catch (_) {}
+    finally { setPendingLoading(false); }
+  }, []);
+
+  useEffect(() => {
+    loadPending();
+    if (isAdmin) getEmployees().then(({ data }) => setEmployees(data)).catch(() => {});
+  }, [loadPending, isAdmin]);
+
+  const handleStatus = async (patientId, status) => {
+    try {
+      await updatePatientStatus(patientId, status);
+      showToast(status === 'ACCEPTAT' ? 'Pacient acceptat cu succes.' : 'Pacient refuzat. Administratorul a fost notificat.');
+      loadPending();
+    } catch (err) {
+      showToast(err.response?.data?.error || 'Eroare la actualizare status', 'error');
+    }
+  };
+
+  const handleRedistribuie = async () => {
+    if (!redistribuieTargetId) return;
+    try {
+      await redistribuiePatient(redistribuieId, redistribuieTargetId);
+      showToast('Pacientul a fost redistribuit cu succes.');
+      setRedistribuieId(null);
+      setRedistribuieTargetId('');
+      loadPending();
+    } catch (err) {
+      showToast(err.response?.data?.error || 'Eroare la redistribuire', 'error');
+    }
+  };
 
   const loadData = async () => {
     try {
@@ -59,8 +107,19 @@ export default function Dashboard() {
     </div>
   );
 
+  const statusBadge = (status) => {
+    if (status === 'PENDING') return <span className="badge badge-orange">Așteptare</span>;
+    if (status === 'REFUZAT') return <span className="badge badge-red">Refuzat</span>;
+    return null;
+  };
+
   return (
     <>
+      {toast && (
+        <div className="toast-container">
+          <div className={`toast ${toast.type}`}>{toast.msg}</div>
+        </div>
+      )}
       <div className="page-header">
         <div>
           <div className="page-title">Dashboard</div>
@@ -220,6 +279,140 @@ export default function Dashboard() {
             </div>
           )}
         </div>
+
+        {/* Pacienti in Asteptare */}
+        <div className="card mt-3">
+          <div className="card-header">
+            <span className="card-title">
+              Pacienți în Așteptare
+              {pendingPatients.length > 0 && (
+                <span className="badge badge-orange" style={{ marginLeft: 8, fontSize: 12, padding: '2px 8px' }}>
+                  {pendingPatients.length}
+                </span>
+              )}
+            </span>
+          </div>
+          {pendingLoading ? (
+            <div style={{ padding: 20, textAlign: 'center' }}><div className="loading-spinner" /></div>
+          ) : pendingPatients.length === 0 ? (
+            <div className="empty-state" style={{ padding: '24px 20px' }}>
+              <p style={{ color: 'var(--text-secondary)', fontSize: 14 }}>Nu există pacienți în așteptare.</p>
+            </div>
+          ) : (
+            <div className="card-body" style={{ padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {pendingPatients.map(p => (
+                <div key={p.id} style={{
+                  border: '1px solid var(--border)',
+                  borderRadius: 'var(--radius-lg)',
+                  padding: '14px 16px',
+                  background: p.status_preluare === 'REFUZAT' ? 'var(--danger-light, #fff5f5)' : 'var(--bg)'
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 8 }}>
+                    <div>
+                      <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 4 }}>{p.nume}</div>
+                      <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
+                        Adăugat: {formatDate(p.data_inregistrare)}
+                        {p.redirectionat_catre_name && (
+                          <span style={{ marginLeft: 8 }}>→ <strong>{p.redirectionat_catre_name}</strong></span>
+                        )}
+                      </div>
+                      <div style={{ marginTop: 6 }}>{statusBadge(p.status_preluare)}</div>
+                    </div>
+                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+                      {p.status_preluare === 'PENDING' && !isAdmin && (
+                        <>
+                          <button
+                            className="btn btn-sm"
+                            style={{ background: 'var(--secondary)', color: 'white', fontWeight: 700, minWidth: 120 }}
+                            onClick={() => handleStatus(p.id, 'ACCEPTAT')}
+                          >
+                            Accepta Pacient
+                          </button>
+                          <button
+                            className="btn btn-danger btn-sm"
+                            style={{ minWidth: 120 }}
+                            onClick={() => handleStatus(p.id, 'REFUZAT')}
+                          >
+                            Refuza Pacient
+                          </button>
+                        </>
+                      )}
+                      {isAdmin && (
+                        <>
+                          {p.status_preluare === 'PENDING' && (
+                            <>
+                              <button
+                                className="btn btn-sm"
+                                style={{ background: 'var(--secondary)', color: 'white', fontWeight: 700 }}
+                                onClick={() => handleStatus(p.id, 'ACCEPTAT')}
+                              >
+                                Accepta
+                              </button>
+                              <button
+                                className="btn btn-danger btn-sm"
+                                onClick={() => handleStatus(p.id, 'REFUZAT')}
+                              >
+                                Refuza
+                              </button>
+                            </>
+                          )}
+                          {p.status_preluare === 'REFUZAT' && (
+                            <button
+                              className="btn btn-secondary btn-sm"
+                              onClick={() => { setRedistribuieId(p.id); setRedistribuieTargetId(''); }}
+                            >
+                              Redistribuie
+                            </button>
+                          )}
+                          <button className="btn btn-ghost btn-sm" onClick={() => navigate(`/pacienti/${p.id}`)}>
+                            Profil
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Modal redistribuire (admin) */}
+        {redistribuieId && (
+          <div className="modal-overlay" onClick={() => setRedistribuieId(null)}>
+            <div className="modal" onClick={e => e.stopPropagation()}>
+              <div className="modal-header">
+                <span className="modal-title">Redistribuie Pacient</span>
+                <button className="modal-close" onClick={() => setRedistribuieId(null)}>✕</button>
+              </div>
+              <div className="modal-body">
+                <div className="form-group">
+                  <label className="form-label">Selectează angajatul</label>
+                  <select
+                    className="form-control"
+                    value={redistribuieTargetId}
+                    onChange={e => setRedistribuieTargetId(e.target.value)}
+                  >
+                    <option value="">— Selectează —</option>
+                    {employees.map(emp => (
+                      <option key={emp.id} value={emp.id}>{emp.name}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button className="btn btn-ghost" onClick={() => setRedistribuieId(null)}>Anulare</button>
+                <button
+                  className="btn btn-primary"
+                  disabled={!redistribuieTargetId}
+                  onClick={handleRedistribuie}
+                >
+                  Redistribuie
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Quick actions (mobile) */}
         <div className="card mt-3" style={{ display: 'block' }}>

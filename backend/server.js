@@ -8,6 +8,7 @@ const patientRoutes = require('./routes/patients');
 const visitRoutes = require('./routes/visits');
 const reportRoutes = require('./routes/reports');
 const uploadRoutes = require('./routes/upload');
+const pushRoutes = require('./routes/push');
 const { scheduleBackup } = require('./routes/backup');
 
 const app = express();
@@ -43,6 +44,7 @@ app.use('/api/patients', patientRoutes);
 app.use('/api/visits', visitRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/upload', uploadRoutes);
+app.use('/api/push', pushRoutes);
 
 // ===== Frontend în producție =====
 if (IS_PROD) {

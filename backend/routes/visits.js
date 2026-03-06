@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { getDb } = require('../database');
 const { authenticate } = require('../middleware/auth');
+const { sendToAdmins } = require('./push');
 
 router.get('/patient/:patientId', authenticate, (req, res) => {
   const db = getDb();
@@ -64,7 +65,18 @@ router.post('/', authenticate, (req, res) => {
     observatii || '', suma_de_plata || 0, suma_incasata || 0,
     poze || '[]'
   );
-  res.status(201).json({ id: result.lastInsertRowid });
+  const visitId = result.lastInsertRowid;
+
+  // Notifica adminii
+  const patientRow = db.prepare('SELECT nume FROM patients WHERE id = ?').get(patient_id);
+  sendToAdmins({
+    title: 'Vizita noua creata',
+    body: `Vizita pentru pacientul ${patientRow ? patientRow.nume : '#' + patient_id} de catre ${req.user.name}.`,
+    url: '/pacienti/' + patient_id,
+    tag: 'new-visit-' + visitId
+  });
+
+  res.status(201).json({ id: visitId });
 });
 
 router.put('/:id', authenticate, (req, res) => {

@@ -23,6 +23,7 @@ api.interceptors.response.use(
 // Auth
 export const login = (email, password) => api.post('/auth/login', { email, password });
 export const getUsers = () => api.get('/auth/users');
+export const getEmployees = () => api.get('/auth/employees');
 export const createUser = (data) => api.post('/auth/users', data);
 export const updateUser = (id, data) => api.put(`/auth/users/${id}`, data);
 export const deleteUser = (id) => api.delete(`/auth/users/${id}`);
@@ -33,6 +34,9 @@ export const getPatient = (id) => api.get(`/patients/${id}`);
 export const createPatient = (data) => api.post('/patients', data);
 export const updatePatient = (id, data) => api.put(`/patients/${id}`, data);
 export const deletePatient = (id) => api.delete(`/patients/${id}`);
+export const getPendingPatients = () => api.get('/patients/pending');
+export const updatePatientStatus = (id, status) => api.put(`/patients/${id}/status`, { status });
+export const redistribuiePatient = (id, redirectionat_catre_id) => api.put(`/patients/${id}/redistribuie`, { redirectionat_catre_id });
 
 // Visits
 export const getVisits = (patientId) => api.get(`/visits/patient/${patientId}`);
@@ -49,6 +53,10 @@ export const uploadPhoto = (file) => {
     headers: { 'Content-Type': 'multipart/form-data' }
   });
 };
+
+// Push notifications
+export const getVapidPublicKey = () => api.get('/push/vapid-public-key');
+export const subscribeToPush = (subscription) => api.post('/push/subscribe', subscription);
 
 // Reports
 export const getReportSummary = () => api.get('/reports/summary');

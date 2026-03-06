@@ -111,8 +111,44 @@ function migrateAddPozeColumn() {
     sqlJsDb.exec("ALTER TABLE visits ADD COLUMN poze TEXT DEFAULT '[]'");
     saveDb();
     console.log('✓ Migration: coloana poze adăugată');
-  } catch (_) {
-    // coloana există deja — normal
+  } catch (_) {}
+}
+
+// ===== Migrare: adaugă status_preluare în patients =====
+function migrateStatusPreluare() {
+  try {
+    sqlJsDb.exec("ALTER TABLE patients ADD COLUMN status_preluare TEXT DEFAULT 'ACTIV'");
+    saveDb();
+    console.log('✓ Migration: coloana status_preluare adăugată');
+  } catch (_) {}
+}
+
+// ===== Migrare: adaugă redirectionat_catre_id în patients =====
+function migrateRedirectionatCatreId() {
+  try {
+    sqlJsDb.exec('ALTER TABLE patients ADD COLUMN redirectionat_catre_id INTEGER');
+    saveDb();
+    console.log('✓ Migration: coloana redirectionat_catre_id adăugată');
+  } catch (_) {}
+}
+
+// ===== Migrare: creare tabelă push_subscriptions =====
+function migratePushSubscriptions() {
+  try {
+    sqlJsDb.exec(`
+      CREATE TABLE IF NOT EXISTS push_subscriptions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        endpoint TEXT NOT NULL,
+        subscription TEXT NOT NULL,
+        created_at TEXT DEFAULT (datetime('now', 'localtime')),
+        FOREIGN KEY (user_id) REFERENCES users(id)
+      )
+    `);
+    saveDb();
+    console.log('✓ Migration: tabela push_subscriptions creata');
+  } catch (err) {
+    console.error('[Migration push_subscriptions]', err.message);
   }
 }
 
@@ -160,7 +196,19 @@ async function initDatabase() {
       acord_gdpr INTEGER DEFAULT 0,
       utilizator_creator_id INTEGER,
       data_inregistrare TEXT DEFAULT (datetime('now', 'localtime')),
-      FOREIGN KEY (utilizator_creator_id) REFERENCES users(id)
+      status_preluare TEXT DEFAULT 'ACTIV',
+      redirectionat_catre_id INTEGER,
+      FOREIGN KEY (utilizator_creator_id) REFERENCES users(id),
+      FOREIGN KEY (redirectionat_catre_id) REFERENCES users(id)
+    );
+
+    CREATE TABLE IF NOT EXISTS push_subscriptions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      endpoint TEXT NOT NULL,
+      subscription TEXT NOT NULL,
+      created_at TEXT DEFAULT (datetime('now', 'localtime')),
+      FOREIGN KEY (user_id) REFERENCES users(id)
     );
 
     CREATE TABLE IF NOT EXISTS visits (
@@ -193,6 +241,9 @@ async function initDatabase() {
   // Migrări pentru baze de date existente
   migrateCnpColumn();
   migrateAddPozeColumn();
+  migrateStatusPreluare();
+  migrateRedirectionatCatreId();
+  migratePushSubscriptions();
 
   // Admin
   const adminEmail = process.env.ADMIN_EMAIL || 'admin@asistenta.ro';

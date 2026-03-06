@@ -27,6 +27,15 @@ router.get('/me', authenticate, (req, res) => {
   res.json(req.user);
 });
 
+// GET /employees — toti angajatii activi (accesibil oricui autentificat)
+router.get('/employees', authenticate, (req, res) => {
+  const db = getDb();
+  const employees = db.prepare(
+    "SELECT id, name, role FROM users WHERE active = 1 ORDER BY name"
+  ).all();
+  res.json(employees);
+});
+
 router.get('/users', authenticate, requireAdmin, (req, res) => {
   const db = getDb();
   const users = db.prepare('SELECT id, email, name, role, active, created_at FROM users ORDER BY name').all();

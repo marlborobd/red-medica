@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { createPatient } from '../services/api';
+import { createPatient, getEmployees } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 
 export default function AddPatient() {
@@ -10,9 +10,15 @@ export default function AddPatient() {
     nume: '', data_nasterii: '', varsta: '',
     adresa: '', telefon: '', acord_gdpr: false
   });
+  const [redirectToId, setRedirectToId] = useState('');
+  const [employees, setEmployees] = useState([]);
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
   const [apiError, setApiError] = useState('');
+
+  useEffect(() => {
+    getEmployees().then(({ data }) => setEmployees(data)).catch(() => {});
+  }, []);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -37,7 +43,9 @@ export default function AddPatient() {
     if (Object.keys(errs).length) { setErrors(errs); return; }
     setLoading(true);
     setApiError('');
-    createPatient(form)
+    const payload = { ...form };
+    if (redirectToId) payload.redirectionat_catre_id = parseInt(redirectToId);
+    createPatient(payload)
       .then(({ data }) => navigate(`/pacienti/${data.id}`))
       .catch(err => setApiError(err.response?.data?.error || 'Eroare la salvare. Încercați din nou.'))
       .finally(() => setLoading(false));
@@ -187,6 +195,26 @@ export default function AddPatient() {
               <div className="form-group">
                 <label className="form-label">Data Înregistrare</label>
                 <input className="form-control" value={new Date().toLocaleDateString('ro-RO')} readOnly />
+              </div>
+              <div className="form-group form-full">
+                <label className="form-label">Redirecționează către angajat</label>
+                <select
+                  className="form-control"
+                  value={redirectToId}
+                  onChange={e => setRedirectToId(e.target.value)}
+                >
+                  <option value="">— Fără redirecționare (adaugă direct) —</option>
+                  {employees.map(emp => (
+                    <option key={emp.id} value={emp.id}>
+                      {emp.name} {emp.role === 'admin' ? '(Admin)' : ''}
+                    </option>
+                  ))}
+                </select>
+                {redirectToId && (
+                  <div className="alert alert-warning mt-2" style={{ padding: '8px 12px', fontSize: 13 }}>
+                    Pacientul va fi trimis cu status PENDING. Angajatul selectat trebuie sa accepte sau sa refuze.
+                  </div>
+                )}
               </div>
             </div>
           </div>
