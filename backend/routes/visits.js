@@ -43,9 +43,6 @@ router.post('/', authenticate, (req, res) => {
   const db = getDb();
   const patient = db.prepare('SELECT * FROM patients WHERE id = ?').get(patient_id);
   if (!patient) return res.status(404).json({ error: 'Pacient negăsit' });
-  if (req.user.role !== 'admin' && patient.utilizator_creator_id !== req.user.id) {
-    return res.status(403).json({ error: 'Acces interzis' });
-  }
 
   const now = new Date();
   const data = now.toISOString().split('T')[0];
@@ -74,8 +71,7 @@ router.put('/:id', authenticate, (req, res) => {
   const db = getDb();
   const visit = db.prepare('SELECT * FROM visits WHERE id = ?').get(req.params.id);
   if (!visit) return res.status(404).json({ error: 'Vizita negăsită' });
-  const patient = db.prepare('SELECT utilizator_creator_id FROM patients WHERE id = ?').get(visit.patient_id);
-  if (req.user.role !== 'admin' && patient.utilizator_creator_id !== req.user.id) {
+  if (req.user.role !== 'admin' && visit.angajat_id !== req.user.id) {
     return res.status(403).json({ error: 'Acces interzis' });
   }
   const {
@@ -104,8 +100,7 @@ router.delete('/:id', authenticate, (req, res) => {
   const db = getDb();
   const visit = db.prepare('SELECT * FROM visits WHERE id = ?').get(req.params.id);
   if (!visit) return res.status(404).json({ error: 'Vizita negăsită' });
-  const patient = db.prepare('SELECT utilizator_creator_id FROM patients WHERE id = ?').get(visit.patient_id);
-  if (req.user.role !== 'admin' && patient.utilizator_creator_id !== req.user.id) {
+  if (req.user.role !== 'admin' && visit.angajat_id !== req.user.id) {
     return res.status(403).json({ error: 'Acces interzis' });
   }
   db.prepare('DELETE FROM visits WHERE id = ?').run(req.params.id);

@@ -58,7 +58,7 @@ export default function PatientList() {
       <div className="page-header">
         <div>
           <div className="page-title">👥 Pacienți</div>
-          <div className="page-subtitle">{patients.length} pacienți{!isAdmin ? ' (pacienții dvs.)' : ''}</div>
+          <div className="page-subtitle">{patients.length} pacienți</div>
         </div>
         <button className="btn btn-primary" onClick={() => navigate('/pacienti/nou')}>
           + Adaugă

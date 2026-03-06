@@ -72,6 +72,7 @@ export default function Layout() {
             alt="Red Medica"
             className="mobile-logo-img"
             style={{ width: 40, height: 40, objectFit: 'contain' }}
+            onError={(e) => { e.target.style.display = 'none'; }}
           />
           <span>{getPageTitle()}</span>
         </div>
@@ -93,7 +94,11 @@ export default function Layout() {
             alt="Red Medica"
             className="sidebar-logo-img"
             style={{ width: 80, height: 80, objectFit: 'contain', marginBottom: 8 }}
+            onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }}
           />
+          <div style={{ display: 'none', width: 80, height: 80, background: 'var(--primary)', borderRadius: 16, marginBottom: 8, alignItems: 'center', justifyContent: 'center', fontSize: 18, fontWeight: 800, color: 'white', textAlign: 'center' }}>
+            Red Medica
+          </div>
           <div>
             <div className="logo-text">Red Medica</div>
             <div className="logo-sub">Asistență la Domiciliu</div>

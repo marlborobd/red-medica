@@ -51,10 +51,15 @@ export default function Login() {
               margin: '0 auto 16px',
               alignItems: 'center',
               justifyContent: 'center',
-              fontSize: 40
+              fontSize: 22,
+              fontWeight: 800,
+              color: 'white',
+              textAlign: 'center',
+              lineHeight: 1.2,
+              padding: 8
             }}
           >
-            🏥
+            Red Medica
           </div>
           <h1>Red Medica</h1>
           <p className="app-subtitle">Asistență Medicală la Domiciliu</p>

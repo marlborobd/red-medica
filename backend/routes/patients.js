@@ -6,32 +6,17 @@ const { authenticate, requireAdmin } = require('../middleware/auth');
 router.get('/', authenticate, (req, res) => {
   const db = getDb();
   const { search } = req.query;
-  let query, patients;
 
-  if (req.user.role === 'admin') {
-    query = `
-      SELECT p.*, u.name as creator_name
-      FROM patients p
-      LEFT JOIN users u ON p.utilizator_creator_id = u.id
-      ${search ? 'WHERE p.nume LIKE ? OR p.telefon LIKE ?' : ''}
-      ORDER BY p.data_inregistrare DESC
-    `;
-    patients = search
-      ? db.prepare(query).all(`%${search}%`, `%${search}%`)
-      : db.prepare(query).all();
-  } else {
-    query = `
-      SELECT p.*, u.name as creator_name
-      FROM patients p
-      LEFT JOIN users u ON p.utilizator_creator_id = u.id
-      WHERE p.utilizator_creator_id = ?
-      ${search ? 'AND (p.nume LIKE ? OR p.telefon LIKE ?)' : ''}
-      ORDER BY p.data_inregistrare DESC
-    `;
-    patients = search
-      ? db.prepare(query).all(req.user.id, `%${search}%`, `%${search}%`)
-      : db.prepare(query).all(req.user.id);
-  }
+  const query = `
+    SELECT p.*, u.name as creator_name
+    FROM patients p
+    LEFT JOIN users u ON p.utilizator_creator_id = u.id
+    ${search ? 'WHERE p.nume LIKE ? OR p.telefon LIKE ?' : ''}
+    ORDER BY p.data_inregistrare DESC
+  `;
+  const patients = search
+    ? db.prepare(query).all(`%${search}%`, `%${search}%`)
+    : db.prepare(query).all();
 
   res.json(patients);
 });

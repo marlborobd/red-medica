@@ -43,6 +43,7 @@ export default function PatientProfile() {
   const [editLoading, setEditLoading] = useState(false);
   const [editError, setEditError] = useState('');
   const [expandedVisit, setExpandedVisit] = useState(null);
+  const [lightboxUrl, setLightboxUrl] = useState(null);
   const [toast, setToast] = useState(null);
 
   const showToast = (msg, type = 'success') => setToast({ msg, type });
@@ -286,7 +287,6 @@ export default function PatientProfile() {
                           </div>
                           <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
                             {v.stare_pacient && <span className={`badge ${stareColor(v.stare_pacient)}`}>{v.stare_pacient}</span>}
-                            {poze.length > 0 && <span className="badge badge-blue" title="Conține fotografii">📷 {poze.length}</span>}
                             <button className="btn btn-ghost btn-sm btn-icon" onClick={() => setExpandedVisit(expandedVisit === v.id ? null : v.id)} title={expandedVisit === v.id ? 'Restrânge' : 'Extinde'}>
                               {expandedVisit === v.id ? '▲' : '▼'}
                             </button>
@@ -308,6 +308,35 @@ export default function PatientProfile() {
                           )}
                         </div>
 
+                        {/* Poze - mereu vizibile */}
+                        {poze.length > 0 && (
+                          <div style={{ marginTop: 12 }}>
+                            <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 8 }}>
+                              📷 Fotografii / Rețete ({poze.length})
+                            </div>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                              {poze.map((url, i) => (
+                                <img
+                                  key={i}
+                                  src={url}
+                                  alt={`Fotografie ${i + 1}`}
+                                  onClick={() => setLightboxUrl(url)}
+                                  style={{
+                                    width: 72, height: 72,
+                                    objectFit: 'cover',
+                                    borderRadius: 8,
+                                    border: '2px solid var(--border)',
+                                    cursor: 'pointer',
+                                    transition: 'transform 0.2s'
+                                  }}
+                                  onMouseOver={e => e.target.style.transform = 'scale(1.08)'}
+                                  onMouseOut={e => e.target.style.transform = 'scale(1)'}
+                                />
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
                         {/* Detalii extinse */}
                         {expandedVisit === v.id && (
                           <div style={{ marginTop: 14, paddingTop: 14, borderTop: '1px dashed var(--border)' }}>
@@ -327,34 +356,6 @@ export default function PatientProfile() {
                               {Number(v.suma_de_plata) > 0 && <div className="visit-detail"><span className="label">Facturat: </span><span className="value">{Number(v.suma_de_plata).toLocaleString('ro-RO')} lei</span></div>}
                             </div>
 
-                            {/* Poze rețete */}
-                            {poze.length > 0 && (
-                              <div style={{ marginTop: 12 }}>
-                                <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 8 }}>
-                                  📷 Fotografii / Rețete ({poze.length})
-                                </div>
-                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                                  {poze.map((url, i) => (
-                                    <a key={i} href={url} target="_blank" rel="noopener noreferrer" title="Deschide fotografia">
-                                      <img
-                                        src={url}
-                                        alt={`Fotografie ${i + 1}`}
-                                        style={{
-                                          width: 72, height: 72,
-                                          objectFit: 'cover',
-                                          borderRadius: 8,
-                                          border: '2px solid var(--border)',
-                                          transition: 'transform 0.2s',
-                                          cursor: 'pointer'
-                                        }}
-                                        onMouseOver={e => e.target.style.transform = 'scale(1.08)'}
-                                        onMouseOut={e => e.target.style.transform = 'scale(1)'}
-                                      />
-                                    </a>
-                                  ))}
-                                </div>
-                              </div>
-                            )}
                           </div>
                         )}
                       </div>
@@ -410,6 +411,38 @@ export default function PatientProfile() {
                 {editLoading ? 'Se salvează...' : '💾 Salvează Modificările'}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Lightbox foto */}
+      {lightboxUrl && (
+        <div
+          className="modal-overlay"
+          onClick={() => setLightboxUrl(null)}
+          style={{ zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+        >
+          <div onClick={e => e.stopPropagation()} style={{ position: 'relative' }}>
+            <button
+              onClick={() => setLightboxUrl(null)}
+              style={{
+                position: 'absolute', top: -14, right: -14,
+                background: 'white', border: '1px solid var(--border)',
+                borderRadius: '50%', width: 30, height: 30,
+                cursor: 'pointer', fontWeight: 700, fontSize: 14,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                zIndex: 1, boxShadow: 'var(--shadow)'
+              }}
+            >✕</button>
+            <img
+              src={lightboxUrl}
+              alt="Fotografie"
+              style={{
+                maxWidth: '90vw', maxHeight: '85vh',
+                objectFit: 'contain', borderRadius: 8,
+                boxShadow: '0 4px 24px rgba(0,0,0,0.4)'
+              }}
+            />
           </div>
         </div>
       )}
