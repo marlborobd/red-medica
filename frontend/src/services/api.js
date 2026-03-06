@@ -54,6 +54,12 @@ export const uploadPhoto = (file) => {
   });
 };
 
+// Scheduled visits
+export const getScheduledVisits = () => api.get('/scheduled-visits');
+export const createScheduledVisit = (data) => api.post('/scheduled-visits', data);
+export const markScheduledEffectuata = (id) => api.put(`/scheduled-visits/${id}/efectuat`);
+export const deleteScheduledVisit = (id) => api.delete(`/scheduled-visits/${id}`);
+
 // Push notifications
 export const getVapidPublicKey = () => api.get('/push/vapid-public-key');
 export const subscribeToPush = (subscription) => api.post('/push/subscribe', subscription);

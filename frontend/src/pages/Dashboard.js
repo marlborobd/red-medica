@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { getReportSummary, getPatients, getVisitsDetail, getPendingPatients, updatePatientStatus, getEmployees, redistribuiePatient } from '../services/api';
+import { getReportSummary, getPatients, getVisitsDetail, getPendingPatients, updatePatientStatus, getEmployees, redistribuiePatient, getScheduledVisits, markScheduledEffectuata, deleteScheduledVisit } from '../services/api';
 
 export default function Dashboard() {
   const { user, isAdmin } = useAuth();
@@ -10,6 +10,8 @@ export default function Dashboard() {
   const [recentVisits, setRecentVisits] = useState([]);
   const [recentPatients, setRecentPatients] = useState([]);
   const [pendingPatients, setPendingPatients] = useState([]);
+  const [scheduledVisits, setScheduledVisits] = useState([]);
+  const [scheduledLoading, setScheduledLoading] = useState(false);
   const [employees, setEmployees] = useState([]);
   const [redistribuieId, setRedistribuieId] = useState(null);
   const [redistribuieTargetId, setRedistribuieTargetId] = useState('');
@@ -33,10 +35,40 @@ export default function Dashboard() {
     finally { setPendingLoading(false); }
   }, []);
 
+  const loadScheduled = useCallback(async () => {
+    setScheduledLoading(true);
+    try {
+      const res = await getScheduledVisits();
+      setScheduledVisits(res.data.filter(v => v.status === 'PROGRAMAT'));
+    } catch (_) {}
+    finally { setScheduledLoading(false); }
+  }, []);
+
   useEffect(() => {
     loadPending();
+    loadScheduled();
     if (isAdmin) getEmployees().then(({ data }) => setEmployees(data)).catch(() => {});
-  }, [loadPending, isAdmin]);
+  }, [loadPending, loadScheduled, isAdmin]);
+
+  const handleMarkEffectuata = async (visitId) => {
+    try {
+      await markScheduledEffectuata(visitId);
+      showToast('Vizita marcata ca efectuata. A fost adaugata automat in istoricul pacientului.');
+      loadScheduled();
+    } catch (err) {
+      showToast(err.response?.data?.error || 'Eroare', 'error');
+    }
+  };
+
+  const handleDeleteScheduled = async (visitId) => {
+    try {
+      await deleteScheduledVisit(visitId);
+      showToast('Vizita programata a fost stearsa.');
+      loadScheduled();
+    } catch (err) {
+      showToast(err.response?.data?.error || 'Eroare', 'error');
+    }
+  };
 
   const handleStatus = async (patientId, status) => {
     try {
@@ -276,6 +308,86 @@ export default function Dashboard() {
                   </table>
                 </div>
               )}
+            </div>
+          )}
+        </div>
+
+        {/* Vizite Programate */}
+        <div className="card mt-3">
+          <div className="card-header">
+            <span className="card-title">
+              📅 Vizite Programate
+              {scheduledVisits.length > 0 && (
+                <span className="badge badge-blue" style={{ marginLeft: 8, fontSize: 12, padding: '2px 8px' }}>
+                  {scheduledVisits.length}
+                </span>
+              )}
+            </span>
+            <button className="btn btn-primary btn-sm" onClick={() => navigate('/pacienti')}>
+              + Programează
+            </button>
+          </div>
+          {scheduledLoading ? (
+            <div style={{ padding: 20, textAlign: 'center' }}><div className="loading-spinner" /></div>
+          ) : scheduledVisits.length === 0 ? (
+            <div className="empty-state" style={{ padding: '24px 20px' }}>
+              <p style={{ color: 'var(--text-secondary)', fontSize: 14 }}>Nu există vizite programate.</p>
+            </div>
+          ) : (
+            <div className="card-body" style={{ padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {(() => {
+                const today = new Date().toISOString().split('T')[0];
+                return scheduledVisits.map(v => {
+                  const isToday = v.data_programata === today;
+                  const isOverdue = v.data_programata < today;
+                  const bg = isOverdue ? '#fff5f5' : isToday ? '#fffbeb' : 'var(--bg, #f9fafb)';
+                  const borderColor = isOverdue ? 'var(--danger)' : isToday ? '#f59e0b' : 'var(--border)';
+                  return (
+                    <div key={v.id} style={{
+                      border: `1px solid ${borderColor}`,
+                      borderRadius: 'var(--radius-lg)',
+                      padding: '12px 14px',
+                      background: bg
+                    }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 8 }}>
+                        <div>
+                          <div style={{ fontWeight: 700, fontSize: 15 }}>
+                            {v.pacient_name}
+                            {isToday && <span className="badge badge-orange" style={{ marginLeft: 8, fontSize: 11 }}>AZI</span>}
+                            {isOverdue && <span className="badge badge-red" style={{ marginLeft: 8, fontSize: 11 }}>INTARZIAT</span>}
+                          </div>
+                          <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginTop: 3 }}>
+                            📅 {formatDate(v.data_programata)} la {v.ora_programata}
+                            {v.angajat_name && <span style={{ marginLeft: 10 }}>👤 {v.angajat_name}</span>}
+                          </div>
+                        </div>
+                        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                          <button
+                            className="btn btn-sm"
+                            style={{ background: 'var(--secondary)', color: 'white', fontWeight: 600 }}
+                            onClick={() => handleMarkEffectuata(v.id)}
+                          >
+                            Marcheaza Efectuata
+                          </button>
+                          <button
+                            className="btn btn-ghost btn-sm"
+                            onClick={() => navigate(`/pacienti/${v.pacient_id}`)}
+                          >
+                            Profil
+                          </button>
+                          <button
+                            className="btn btn-danger btn-sm btn-icon"
+                            onClick={() => handleDeleteScheduled(v.id)}
+                            title="Sterge programarea"
+                          >
+                            🗑️
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                });
+              })()}
             </div>
           )}
         </div>

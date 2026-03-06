@@ -9,6 +9,8 @@ const visitRoutes = require('./routes/visits');
 const reportRoutes = require('./routes/reports');
 const uploadRoutes = require('./routes/upload');
 const pushRoutes = require('./routes/push');
+const scheduledVisitsRoutes = require('./routes/scheduled-visits');
+const { scheduleMorningNotifications } = require('./routes/scheduled-visits');
 const { scheduleBackup } = require('./routes/backup');
 
 const app = express();
@@ -45,6 +47,7 @@ app.use('/api/visits', visitRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/push', pushRoutes);
+app.use('/api/scheduled-visits', scheduledVisitsRoutes);
 
 // ===== Frontend în producție =====
 if (IS_PROD) {
@@ -77,6 +80,8 @@ initDatabase()
 
     // Backup zilnic Google Drive la ora 02:00
     scheduleBackup();
+    // Notificari dimineata la ora 08:00
+    scheduleMorningNotifications();
   })
   .catch(err => {
     console.error('[FATAL] Nu s-a putut inițializa baza de date:', err.message);

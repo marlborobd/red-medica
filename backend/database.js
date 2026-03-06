@@ -132,6 +132,29 @@ function migrateRedirectionatCatreId() {
   } catch (_) {}
 }
 
+// ===== Migrare: creare tabelă vizite_programate =====
+function migrateViziteProgramate() {
+  try {
+    sqlJsDb.exec(`
+      CREATE TABLE IF NOT EXISTS vizite_programate (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        pacient_id INTEGER NOT NULL,
+        data_programata TEXT NOT NULL,
+        ora_programata TEXT NOT NULL,
+        angajat_responsabil INTEGER NOT NULL,
+        status TEXT DEFAULT 'PROGRAMAT',
+        created_at TEXT DEFAULT (datetime('now', 'localtime')),
+        FOREIGN KEY (pacient_id) REFERENCES patients(id),
+        FOREIGN KEY (angajat_responsabil) REFERENCES users(id)
+      )
+    `);
+    saveDb();
+    console.log('✓ Migration: tabela vizite_programate creata');
+  } catch (err) {
+    console.error('[Migration vizite_programate]', err.message);
+  }
+}
+
 // ===== Migrare: creare tabelă push_subscriptions =====
 function migratePushSubscriptions() {
   try {
@@ -202,6 +225,18 @@ async function initDatabase() {
       FOREIGN KEY (redirectionat_catre_id) REFERENCES users(id)
     );
 
+    CREATE TABLE IF NOT EXISTS vizite_programate (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      pacient_id INTEGER NOT NULL,
+      data_programata TEXT NOT NULL,
+      ora_programata TEXT NOT NULL,
+      angajat_responsabil INTEGER NOT NULL,
+      status TEXT DEFAULT 'PROGRAMAT' CHECK(status IN ('PROGRAMAT', 'EFECTUAT')),
+      created_at TEXT DEFAULT (datetime('now', 'localtime')),
+      FOREIGN KEY (pacient_id) REFERENCES patients(id),
+      FOREIGN KEY (angajat_responsabil) REFERENCES users(id)
+    );
+
     CREATE TABLE IF NOT EXISTS push_subscriptions (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       user_id INTEGER NOT NULL,
@@ -243,6 +278,7 @@ async function initDatabase() {
   migrateAddPozeColumn();
   migrateStatusPreluare();
   migrateRedirectionatCatreId();
+  migrateViziteProgramate();
   migratePushSubscriptions();
 
   // Admin

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getPatient, getVisits, deleteVisit, updatePatient } from '../services/api';
+import { getPatient, getVisits, deleteVisit, updatePatient, createScheduledVisit, getEmployees } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 
 function formatDate(d) {
@@ -45,8 +45,50 @@ export default function PatientProfile() {
   const [expandedVisit, setExpandedVisit] = useState(null);
   const [lightboxUrl, setLightboxUrl] = useState(null);
   const [toast, setToast] = useState(null);
+  const [scheduleModal, setScheduleModal] = useState(false);
+  const [scheduleForm, setScheduleForm] = useState({ data_programata: '', ora_programata: '', angajat_responsabil: '' });
+  const [employees, setEmployees] = useState([]);
+  const [scheduleSaving, setScheduleSaving] = useState(false);
+  const [scheduleError, setScheduleError] = useState('');
 
   const showToast = (msg, type = 'success') => setToast({ msg, type });
+
+  const openScheduleModal = () => {
+    const today = new Date().toISOString().split('T')[0];
+    const time = new Date().toTimeString().substring(0, 5);
+    setScheduleForm({ data_programata: today, ora_programata: time, angajat_responsabil: '' });
+    setScheduleError('');
+    setScheduleModal(true);
+    if (employees.length === 0) {
+      getEmployees().then(({ data }) => setEmployees(data)).catch(() => {});
+    }
+  };
+
+  const handleScheduleSave = async () => {
+    if (!scheduleForm.data_programata || !scheduleForm.ora_programata) {
+      setScheduleError('Data si ora sunt obligatorii');
+      return;
+    }
+    setScheduleSaving(true);
+    setScheduleError('');
+    try {
+      const payload = {
+        pacient_id: parseInt(id),
+        data_programata: scheduleForm.data_programata,
+        ora_programata: scheduleForm.ora_programata,
+      };
+      if (scheduleForm.angajat_responsabil) {
+        payload.angajat_responsabil = parseInt(scheduleForm.angajat_responsabil);
+      }
+      await createScheduledVisit(payload);
+      setScheduleModal(false);
+      showToast('Vizita a fost programata cu succes. Angajatul a primit notificare.');
+    } catch (err) {
+      setScheduleError(err.response?.data?.error || 'Eroare la programare');
+    } finally {
+      setScheduleSaving(false);
+    }
+  };
 
   useEffect(() => { loadData(); }, [id]);
 
@@ -135,6 +177,7 @@ export default function PatientProfile() {
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <button className="btn btn-ghost btn-sm" onClick={() => navigate('/pacienti')}>← Înapoi</button>
           <button className="btn btn-secondary btn-sm" onClick={startEdit}>✏️ Editează</button>
+          <button className="btn btn-ghost btn-sm" onClick={openScheduleModal} style={{ color: 'var(--primary)' }}>📅 Programează</button>
           <button className="btn btn-primary btn-sm" onClick={() => navigate(`/pacienti/${id}/vizita`)}>+ Vizită</button>
         </div>
       </div>
@@ -144,7 +187,41 @@ export default function PatientProfile() {
         <div className="profile-header mb-2">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12 }}>
             <div>
-              <h2>{patient.nume}</h2>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 8 }}>
+                <h2 style={{ margin: 0 }}>{patient.nume}</h2>
+                {patient.telefon && (
+                  <a
+                    href={`tel:${patient.telefon.replace(/\s/g, '')}`}
+                    title={`Apelează: ${patient.telefon}`}
+                    style={{
+                      display: 'inline-flex', alignItems: 'center', gap: 6,
+                      background: '#16a34a', color: 'white',
+                      borderRadius: 20, padding: '5px 14px',
+                      fontSize: 13, fontWeight: 700, textDecoration: 'none',
+                      boxShadow: '0 2px 6px rgba(22,163,74,0.3)'
+                    }}
+                  >
+                    Apelează
+                  </a>
+                )}
+                {patient.adresa && (
+                  <a
+                    href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(patient.adresa)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title="Navigare Google Maps"
+                    style={{
+                      display: 'inline-flex', alignItems: 'center', gap: 6,
+                      background: '#2563eb', color: 'white',
+                      borderRadius: 20, padding: '5px 14px',
+                      fontSize: 13, fontWeight: 700, textDecoration: 'none',
+                      boxShadow: '0 2px 6px rgba(37,99,235,0.3)'
+                    }}
+                  >
+                    Navigare
+                  </a>
+                )}
+              </div>
               <div className="profile-meta">
                 <div className="profile-meta-item">🎂 <strong>{patient.varsta ? `${patient.varsta} ani` : 'N/A'}</strong></div>
                 {patient.data_nasterii && <div className="profile-meta-item">📅 {formatDateRo(patient.data_nasterii)}</div>}
@@ -367,6 +444,60 @@ export default function PatientProfile() {
           </div>
         )}
       </div>
+
+      {/* Modal programare vizita */}
+      {scheduleModal && (
+        <div className="modal-overlay" onClick={() => setScheduleModal(false)}>
+          <div className="modal" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <span className="modal-title">📅 Programează Vizită</span>
+              <button className="modal-close" onClick={() => setScheduleModal(false)}>✕</button>
+            </div>
+            <div className="modal-body">
+              {scheduleError && <div className="alert alert-danger mb-2">⚠️ {scheduleError}</div>}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                <div className="form-group">
+                  <label className="form-label">Data Vizitei <span className="required">*</span></label>
+                  <input
+                    type="date"
+                    className="form-control"
+                    value={scheduleForm.data_programata}
+                    onChange={e => setScheduleForm(p => ({ ...p, data_programata: e.target.value }))}
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Ora Vizitei <span className="required">*</span></label>
+                  <input
+                    type="time"
+                    className="form-control"
+                    value={scheduleForm.ora_programata}
+                    onChange={e => setScheduleForm(p => ({ ...p, ora_programata: e.target.value }))}
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Angajat Responsabil</label>
+                  <select
+                    className="form-control"
+                    value={scheduleForm.angajat_responsabil}
+                    onChange={e => setScheduleForm(p => ({ ...p, angajat_responsabil: e.target.value }))}
+                  >
+                    <option value="">— Eu (utilizatorul curent) —</option>
+                    {employees.map(emp => (
+                      <option key={emp.id} value={emp.id}>{emp.name}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-ghost" onClick={() => setScheduleModal(false)}>Anulare</button>
+              <button className="btn btn-primary" onClick={handleScheduleSave} disabled={scheduleSaving}>
+                {scheduleSaving ? 'Se salvează...' : '📅 Salvează Programarea'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal editare pacient */}
       {editMode && (
