@@ -78,7 +78,7 @@ function migrateCnpColumn() {
 
     console.log('Migration: eliminare constrângere cnp NOT NULL...');
     sqlJsDb.exec(`
-      CREATE TABLE patients_v2 (
+      CREATE TABLE IF NOT EXISTS patients_v2 (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         nume TEXT NOT NULL,
         cnp TEXT,
@@ -91,11 +91,11 @@ function migrateCnpColumn() {
         data_inregistrare TEXT DEFAULT (datetime('now', 'localtime')),
         FOREIGN KEY (utilizator_creator_id) REFERENCES users(id)
       );
-      INSERT INTO patients_v2
+      INSERT OR IGNORE INTO patients_v2
         SELECT id, nume, cnp, data_nasterii, varsta, adresa, telefon,
                acord_gdpr, utilizator_creator_id, data_inregistrare
         FROM patients;
-      DROP TABLE patients;
+      ALTER TABLE patients RENAME TO patients_old_backup;
       ALTER TABLE patients_v2 RENAME TO patients;
     `);
     saveDb();
@@ -286,13 +286,9 @@ async function initDatabase() {
   const adminPassword = process.env.ADMIN_PASSWORD || 'Admin123!';
   const adminName = process.env.ADMIN_NAME || 'Administrator';
 
-  const adminExists = db.prepare('SELECT id FROM users WHERE email = ?').get(adminEmail);
-  if (!adminExists) {
-    const hashedPassword = bcrypt.hashSync(adminPassword, 10);
-    db.prepare('INSERT INTO users (email, password, name, role) VALUES (?, ?, ?, ?)')
-      .run(adminEmail, hashedPassword, adminName, 'admin');
-    console.log(`✓ Admin creat: ${adminEmail}`);
-  }
+  const hashedPassword = bcrypt.hashSync(adminPassword, 10);
+  db.prepare('INSERT OR IGNORE INTO users (email, password, name, role) VALUES (?, ?, ?, ?)')
+    .run(adminEmail, hashedPassword, adminName, 'admin');
 
   saveDb();
   console.log('✓ Baza de date inițializată cu succes');
