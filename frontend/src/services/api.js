@@ -70,4 +70,6 @@ export const getReportMonthly = (year) => api.get('/reports/monthly', { params: 
 export const getReportEmployees = () => api.get('/reports/employees');
 export const getVisitsDetail = (params) => api.get('/reports/visits-detail', { params });
 
+export const triggerManualBackup = () => api.get('/backup/manual');
+
 export default api;

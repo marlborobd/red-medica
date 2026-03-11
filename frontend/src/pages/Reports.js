@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { getReportSummary, getReportMonthly, getReportEmployees, getVisitsDetail, getUsers } from '../services/api';
+import { getReportSummary, getReportMonthly, getReportEmployees, getVisitsDetail, getUsers, triggerManualBackup } from '../services/api';
 
 const MONTHS = ['Ian', 'Feb', 'Mar', 'Apr', 'Mai', 'Iun', 'Iul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
@@ -14,6 +14,8 @@ export default function Reports() {
   const [year, setYear] = useState(new Date().getFullYear());
   const [filters, setFilters] = useState({ from: '', to: '', angajat_id: '' });
   const [activeTab, setActiveTab] = useState('general');
+  const [backupLoading, setBackupLoading] = useState(false);
+  const [backupMsg, setBackupMsg] = useState(null);
 
   useEffect(() => {
     loadMain();
@@ -57,6 +59,20 @@ export default function Reports() {
     }
   };
 
+  const handleManualBackup = async () => {
+    setBackupLoading(true);
+    setBackupMsg(null);
+    try {
+      await triggerManualBackup();
+      setBackupMsg({ ok: true, text: 'Backup reușit!' });
+    } catch (err) {
+      setBackupMsg({ ok: false, text: err.response?.data?.message || 'Backup eșuat' });
+    } finally {
+      setBackupLoading(false);
+      setTimeout(() => setBackupMsg(null), 4000);
+    }
+  };
+
   const formatDate = (d) => d ? new Date(d).toLocaleDateString('ro-RO') : '-';
   const formatMoney = (v) => `${Number(v || 0).toLocaleString('ro-RO')} lei`;
 
@@ -70,6 +86,16 @@ export default function Reports() {
         <div>
           <div className="page-title">📈 Rapoarte</div>
           <div className="page-subtitle">Statistici și analize — doar administratori</div>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          {backupMsg && (
+            <span style={{ fontSize: 13, color: backupMsg.ok ? 'var(--secondary)' : 'var(--danger)', fontWeight: 600 }}>
+              {backupMsg.ok ? '✓' : '✗'} {backupMsg.text}
+            </span>
+          )}
+          <button className="btn btn-ghost btn-sm" onClick={handleManualBackup} disabled={backupLoading}>
+            {backupLoading ? 'Se salvează...' : '💾 Backup Manual'}
+          </button>
         </div>
       </div>
 
