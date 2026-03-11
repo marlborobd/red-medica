@@ -2,6 +2,13 @@ const { google } = require('googleapis');
 const { Readable } = require('stream');
 const { getDb } = require('./database');
 
+let lastBackupAt = null;
+let lastBackupFile = null;
+
+function getLastBackup() {
+  return { lastBackupAt, lastBackupFile };
+}
+
 async function runBackup() {
   try {
     const db = getDb();
@@ -47,10 +54,13 @@ async function runBackup() {
       }
     });
 
+    lastBackupAt = new Date().toISOString();
+    lastBackupFile = filename;
     console.log(`Backup reușit: ${filename} (ID: ${response.data.id})`);
   } catch (err) {
     console.error('[Backup] Eroare:', err);
+    throw err;
   }
 }
 
-module.exports = { runBackup };
+module.exports = { runBackup, getLastBackup };

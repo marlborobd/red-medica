@@ -14,7 +14,7 @@ const scheduledVisitsRoutes = require('./routes/scheduled-visits');
 const { scheduleMorningNotifications } = require('./routes/scheduled-visits');
 const { scheduleBackup } = require('./routes/backup');
 const cron = require('node-cron');
-const { runBackup } = require('./backup');
+const { runBackup, getLastBackup } = require('./backup');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -60,6 +60,11 @@ app.get('/api/backup/manual', async (req, res) => {
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
+});
+
+app.get('/api/backup/status', (req, res) => {
+  const { lastBackupAt, lastBackupFile } = getLastBackup();
+  res.json({ lastBackupAt, lastBackupFile });
 });
 
 // ===== Frontend în producție =====

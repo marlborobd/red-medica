@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { getReportSummary, getReportMonthly, getReportEmployees, getVisitsDetail, getUsers, triggerManualBackup } from '../services/api';
+import { getReportSummary, getReportMonthly, getReportEmployees, getVisitsDetail, getUsers, triggerManualBackup, getBackupStatus } from '../services/api';
 
 const MONTHS = ['Ian', 'Feb', 'Mar', 'Apr', 'Mai', 'Iun', 'Iul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
@@ -16,10 +16,12 @@ export default function Reports() {
   const [activeTab, setActiveTab] = useState('general');
   const [backupLoading, setBackupLoading] = useState(false);
   const [backupMsg, setBackupMsg] = useState(null);
+  const [lastBackupAt, setLastBackupAt] = useState(null);
 
   useEffect(() => {
     loadMain();
     loadUsers();
+    getBackupStatus().then(r => { if (r.data.lastBackupAt) setLastBackupAt(r.data.lastBackupAt); }).catch(() => {});
   }, []);
 
   useEffect(() => { loadMonthly(); }, [year]);
@@ -64,12 +66,14 @@ export default function Reports() {
     setBackupMsg(null);
     try {
       await triggerManualBackup();
+      const now = new Date().toISOString();
+      setLastBackupAt(now);
       setBackupMsg({ ok: true, text: 'Backup reușit!' });
     } catch (err) {
-      setBackupMsg({ ok: false, text: err.response?.data?.message || 'Backup eșuat' });
+      setBackupMsg({ ok: false, text: err.response?.data?.message || 'Eroare la backup' });
     } finally {
       setBackupLoading(false);
-      setTimeout(() => setBackupMsg(null), 4000);
+      setTimeout(() => setBackupMsg(null), 5000);
     }
   };
 
@@ -87,15 +91,27 @@ export default function Reports() {
           <div className="page-title">📈 Rapoarte</div>
           <div className="page-subtitle">Statistici și analize — doar administratori</div>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
+          <button
+            className="btn btn-danger btn-sm"
+            onClick={handleManualBackup}
+            disabled={backupLoading}
+            style={{ minWidth: 150 }}
+          >
+            {backupLoading
+              ? <><span className="loading-spinner" style={{ width: 14, height: 14, borderWidth: 2, marginRight: 6 }} />Se salvează...</>
+              : '💾 Backup Manual'}
+          </button>
           {backupMsg && (
-            <span style={{ fontSize: 13, color: backupMsg.ok ? 'var(--secondary)' : 'var(--danger)', fontWeight: 600 }}>
+            <span style={{ fontSize: 12, fontWeight: 600, color: backupMsg.ok ? 'var(--secondary)' : 'var(--danger)' }}>
               {backupMsg.ok ? '✓' : '✗'} {backupMsg.text}
             </span>
           )}
-          <button className="btn btn-ghost btn-sm" onClick={handleManualBackup} disabled={backupLoading}>
-            {backupLoading ? 'Se salvează...' : '💾 Backup Manual'}
-          </button>
+          {lastBackupAt && !backupMsg && (
+            <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>
+              Ultimul backup: {new Date(lastBackupAt).toLocaleString('ro-RO')}
+            </span>
+          )}
         </div>
       </div>
 
