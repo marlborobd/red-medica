@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Layout from './components/Layout';
@@ -26,6 +26,21 @@ function AdminRoute({ children }) {
 
 function AppRoutes() {
   const { user } = useAuth();
+
+  // Sincronizează user-ul cu OneSignal (external_id = user.id din DB)
+  useEffect(() => {
+    if (!window.OneSignalDeferred) return;
+    window.OneSignalDeferred.push(async function(OneSignal) {
+      try {
+        if (user && user.id) {
+          await OneSignal.login(String(user.id));
+        } else {
+          await OneSignal.logout();
+        }
+      } catch (_) {}
+    });
+  }, [user]);
+
   return (
     <Routes>
       <Route path="/login" element={user ? <Navigate to="/" replace /> : <Login />} />
@@ -45,6 +60,21 @@ function AppRoutes() {
 }
 
 export default function App() {
+  // Inițializează OneSignal o singură dată
+  useEffect(() => {
+    const appId = process.env.REACT_APP_ONESIGNAL_APP_ID;
+    if (!appId || !window.OneSignalDeferred) return;
+    window.OneSignalDeferred.push(async function(OneSignal) {
+      try {
+        await OneSignal.init({
+          appId,
+          allowLocalhostAsSecureOrigin: true,
+          notifyButton: { enable: false }
+        });
+      } catch (_) {}
+    });
+  }, []);
+
   return (
     <BrowserRouter>
       <AuthProvider>

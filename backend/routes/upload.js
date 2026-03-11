@@ -39,7 +39,9 @@ router.post('/', authenticate, upload.single('file'), async (req, res) => {
         {
           folder: 'red-medica/retete',
           resource_type: 'image',
-          transformation: [{ quality: 'auto', fetch_format: 'auto' }]
+          transformation: [{ quality: 'auto', fetch_format: 'auto' }],
+          invalidate: true,
+          tags: ['reteta_medicala']
         },
         (error, result) => (error ? reject(error) : resolve(result))
       ).end(req.file.buffer);

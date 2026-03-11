@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { getDb } = require('../database');
 const { authenticate } = require('../middleware/auth');
-const { sendToUser, sendToAdmins } = require('./push');
+const { sendToUser, sendToAdmins } = require('../notifications');
 
 // GET / — toate vizitele programate
 router.get('/', authenticate, (req, res) => {

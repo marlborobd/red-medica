@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { getDb } = require('../database');
 const { authenticate, requireAdmin } = require('../middleware/auth');
-const { sendToUser, sendToAdmins } = require('./push');
+const { sendToUser, sendToAdmins } = require('../notifications');
 
 router.get('/', authenticate, (req, res) => {
   const db = getDb();

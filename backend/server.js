@@ -122,6 +122,9 @@ initDatabase()
     scheduleMorningNotifications();
     // Backup imediat la pornire (după 5 secunde)
     setTimeout(() => runBackup().catch(e => console.error('[Backup startup]', e.message)), 5000);
+    // Ștergere automată poze vechi > 90 zile la ora 01:00
+    const { schedulePhotoCleanup } = require('./cleanup-photos');
+    schedulePhotoCleanup();
   })
   .catch(err => {
     console.error('[FATAL] Nu s-a putut inițializa baza de date:', err.message);
