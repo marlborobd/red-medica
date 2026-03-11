@@ -276,7 +276,7 @@ export default function AddVisit() {
             )}
 
             {/* Buton upload — pe mobil deschide camera direct */}
-            <label style={{ display: 'block', cursor: uploadingPhoto ? 'wait' : 'pointer' }}>
+            <label className="upload-photo-label" style={{ cursor: uploadingPhoto ? 'wait' : 'pointer' }}>
               <input
                 ref={fileInputRef}
                 type="file"
@@ -288,11 +288,8 @@ export default function AddVisit() {
                 disabled={uploadingPhoto}
               />
               <div
-                className={`btn ${uploadingPhoto ? 'btn-ghost' : 'btn-secondary'}`}
-                style={{
-                  display: 'inline-flex', alignItems: 'center', gap: 8,
-                  pointerEvents: uploadingPhoto ? 'none' : 'auto'
-                }}
+                className={`btn upload-photo-btn ${uploadingPhoto ? 'btn-ghost' : 'btn-secondary'}`}
+                style={{ pointerEvents: uploadingPhoto ? 'none' : 'auto' }}
               >
                 {uploadingPhoto
                   ? <><div className="loading-spinner" style={{ width: 18, height: 18, borderWidth: 2 }} /> Se încarcă fotografia...</>

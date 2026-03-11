@@ -362,7 +362,7 @@ export default function Reports() {
             <span className="card-title">💾 Backup Date</span>
           </div>
           <div className="card-body">
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+            <div className="backup-buttons">
               <button
                 className="btn btn-danger"
                 onClick={handleBackupSection}
@@ -378,7 +378,7 @@ export default function Reports() {
               >
                 ⬇️ Descarcă Backup Excel
               </a>
-              <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
+              <span className="backup-status-text" style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
                 Data ultimului backup:{' '}
                 <strong style={{ color: 'var(--text)' }}>
                   {lastBackupAt

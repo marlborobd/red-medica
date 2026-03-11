@@ -763,3 +763,49 @@ tr:hover td { background: var(--primary-lighter); }
   .bottom-nav { padding-bottom: env(safe-area-inset-bottom); height: calc(var(--bottom-nav-height) + env(safe-area-inset-bottom)); }
   .main-content { padding-bottom: calc(var(--bottom-nav-height) + env(safe-area-inset-bottom)); }
 }
+
+/* ===== BACKUP BUTTONS RESPONSIVE ===== */
+.backup-buttons {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+@media (max-width: 768px) {
+  .backup-buttons {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+  .backup-buttons .btn,
+  .backup-buttons a.btn {
+    width: 100%;
+    min-height: 48px;
+    font-size: 16px !important;
+    justify-content: center;
+    text-align: center;
+    box-sizing: border-box;
+  }
+  .backup-buttons .backup-status-text {
+    font-size: 14px;
+    text-align: left;
+  }
+}
+
+/* ===== UPLOAD FOTO RESPONSIVE ===== */
+.upload-photo-label { display: block; }
+.upload-photo-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+@media (max-width: 768px) {
+  .upload-photo-btn {
+    display: flex;
+    width: 100%;
+    min-height: 48px;
+    font-size: 16px !important;
+    justify-content: center;
+    box-sizing: border-box;
+  }
+}
