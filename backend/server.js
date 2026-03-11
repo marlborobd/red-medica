@@ -12,6 +12,8 @@ const pushRoutes = require('./routes/push');
 const scheduledVisitsRoutes = require('./routes/scheduled-visits');
 const { scheduleMorningNotifications } = require('./routes/scheduled-visits');
 const { scheduleBackup } = require('./routes/backup');
+const cron = require('node-cron');
+const { runBackup } = require('./backup');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -49,6 +51,16 @@ app.use('/api/upload', uploadRoutes);
 app.use('/api/push', pushRoutes);
 app.use('/api/scheduled-visits', scheduledVisitsRoutes);
 
+// ===== Backup manual =====
+app.get('/api/backup/manual', async (req, res) => {
+  try {
+    await runBackup();
+    res.json({ success: true, message: 'Backup reușit' });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 // ===== Frontend în producție =====
 if (IS_PROD) {
   const frontendBuildPath = path.join(__dirname, '..', 'frontend', 'build');
@@ -80,6 +92,8 @@ initDatabase()
 
     // Backup zilnic Google Drive la ora 02:00
     scheduleBackup();
+    // Backup automat zilnic la ora 00:00 via node-cron
+    cron.schedule('0 0 * * *', runBackup);
     // Notificari dimineata la ora 08:00
     scheduleMorningNotifications();
   })
