@@ -99,7 +99,7 @@ export default function Reports() {
             style={{ minWidth: 150 }}
           >
             {backupLoading
-              ? <><span className="loading-spinner" style={{ width: 14, height: 14, borderWidth: 2, marginRight: 6 }} />Se salvează...</>
+              ? <><span className="loading-spinner" style={{ width: 14, height: 14, borderWidth: 2, marginRight: 6, display: 'inline-block', verticalAlign: 'middle' }} />Se salvează...</>
               : '💾 Backup Manual'}
           </button>
           {backupMsg && (
