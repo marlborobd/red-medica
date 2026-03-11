@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { getReportSummary, getReportMonthly, getReportEmployees, getVisitsDetail, getUsers, triggerManualBackup, getBackupStatus } from '../services/api';
+import { getReportSummary, getReportMonthly, getReportEmployees, getVisitsDetail, getUsers, triggerManualBackup, triggerBackupManual, getBackupStatus } from '../services/api';
 
 const MONTHS = ['Ian', 'Feb', 'Mar', 'Apr', 'Mai', 'Iun', 'Iul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
@@ -17,6 +17,8 @@ export default function Reports() {
   const [backupLoading, setBackupLoading] = useState(false);
   const [backupMsg, setBackupMsg] = useState(null);
   const [lastBackupAt, setLastBackupAt] = useState(null);
+  const [backupSectionLoading, setBackupSectionLoading] = useState(false);
+  const [backupSectionMsg, setBackupSectionMsg] = useState(null);
 
   useEffect(() => {
     loadMain();
@@ -74,6 +76,22 @@ export default function Reports() {
     } finally {
       setBackupLoading(false);
       setTimeout(() => setBackupMsg(null), 5000);
+    }
+  };
+
+  const handleBackupSection = async () => {
+    setBackupSectionLoading(true);
+    setBackupSectionMsg(null);
+    try {
+      await triggerBackupManual();
+      const now = new Date().toISOString();
+      setLastBackupAt(now);
+      setBackupSectionMsg({ ok: true, text: 'Backup creat cu succes!' });
+    } catch (err) {
+      setBackupSectionMsg({ ok: false, text: err.response?.data?.message || err.response?.data?.error || 'Eroare la backup' });
+    } finally {
+      setBackupSectionLoading(false);
+      setTimeout(() => setBackupSectionMsg(null), 6000);
     }
   };
 
@@ -337,6 +355,45 @@ export default function Reports() {
             </div>
           </div>
         )}
+
+        {/* Backup Date */}
+        <div className="card" style={{ marginTop: 24 }}>
+          <div className="card-header">
+            <span className="card-title">💾 Backup Date</span>
+          </div>
+          <div className="card-body">
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+              <button
+                className="btn btn-danger"
+                onClick={handleBackupSection}
+                disabled={backupSectionLoading}
+              >
+                {backupSectionLoading ? 'Se salvează...' : '💾 Backup Manual'}
+              </button>
+              <a
+                href="/api/backup/download"
+                download="RedMedica_Backup.xlsx"
+                className="btn btn-primary"
+                style={{ textDecoration: 'none' }}
+              >
+                ⬇️ Descarcă Backup Excel
+              </a>
+              <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
+                Data ultimului backup:{' '}
+                <strong style={{ color: 'var(--text)' }}>
+                  {lastBackupAt
+                    ? new Date(lastBackupAt).toLocaleString('ro-RO')
+                    : 'Niciun backup efectuat încă'}
+                </strong>
+              </span>
+            </div>
+            {backupSectionMsg && (
+              <div style={{ marginTop: 10, fontSize: 13, fontWeight: 600, color: backupSectionMsg.ok ? 'var(--secondary)' : 'var(--danger)' }}>
+                {backupSectionMsg.ok ? '✓' : '✗'} {backupSectionMsg.text}
+              </div>
+            )}
+          </div>
+        </div>
       </div>
     </>
   );

@@ -71,6 +71,7 @@ export const getReportEmployees = () => api.get('/reports/employees');
 export const getVisitsDetail = (params) => api.get('/reports/visits-detail', { params });
 
 export const triggerManualBackup = () => api.get('/backup/manual');
+export const triggerBackupManual = () => api.post('/backup/manual');
 export const getBackupStatus = () => api.get('/backup/status');
 
 export default api;

@@ -52,8 +52,17 @@ app.use('/api/upload', uploadRoutes);
 app.use('/api/push', pushRoutes);
 app.use('/api/scheduled-visits', scheduledVisitsRoutes);
 
-// ===== Backup manual =====
+// ===== Backup endpoints =====
 app.get('/api/backup/manual', async (req, res) => {
+  try {
+    await runBackup();
+    res.json({ success: true, message: 'Backup reușit' });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+app.post('/api/backup/manual', async (req, res) => {
   try {
     await runBackup();
     res.json({ success: true, message: 'Backup reușit' });
@@ -65,6 +74,15 @@ app.get('/api/backup/manual', async (req, res) => {
 app.get('/api/backup/status', (req, res) => {
   const { lastBackupAt, lastBackupFile } = getLastBackup();
   res.json({ lastBackupAt, lastBackupFile });
+});
+
+app.get('/api/backup/download', (req, res) => {
+  const { BACKUP_FILE } = require('./backup');
+  const fsSync = require('fs');
+  if (!fsSync.existsSync(BACKUP_FILE)) {
+    return res.status(404).json({ error: 'Fișierul backup nu există încă. Rulați un backup mai întâi.' });
+  }
+  res.download(BACKUP_FILE, 'RedMedica_Backup.xlsx');
 });
 
 // ===== Frontend în producție =====
@@ -98,10 +116,12 @@ initDatabase()
 
     // Backup zilnic Google Drive la ora 02:00
     scheduleBackup();
-    // Backup automat zilnic la ora 00:00 via node-cron
-    cron.schedule('0 0 * * *', runBackup);
+    // Backup Excel automat zilnic la ora 00:00
+    cron.schedule('0 0 * * *', () => runBackup().catch(e => console.error('[Backup cron]', e.message)));
     // Notificari dimineata la ora 08:00
     scheduleMorningNotifications();
+    // Backup imediat la pornire (după 5 secunde)
+    setTimeout(() => runBackup().catch(e => console.error('[Backup startup]', e.message)), 5000);
   })
   .catch(err => {
     console.error('[FATAL] Nu s-a putut inițializa baza de date:', err.message);
