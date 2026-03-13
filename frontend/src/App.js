@@ -29,7 +29,7 @@ function AppRoutes() {
 
   // Sincronizează user-ul cu OneSignal (external_id = email)
   useEffect(() => {
-    if (!window.OneSignalDeferred) return;
+    window.OneSignalDeferred = window.OneSignalDeferred || [];
     window.OneSignalDeferred.push(async function(OneSignal) {
       try {
         if (user && user.email) {
@@ -73,17 +73,12 @@ export default function App() {
       console.error('[OneSignal] App ID lipsă - OneSignal nu se va inițializa!');
       return;
     }
-    if (!window.OneSignalDeferred) {
-      console.error('[OneSignal] window.OneSignalDeferred lipsă - SDK-ul nu s-a încărcat!');
-      return;
-    }
+    window.OneSignalDeferred = window.OneSignalDeferred || [];
     window.OneSignalDeferred.push(async function(OneSignal) {
       try {
         console.log('[OneSignal] Init start, appId:', appId);
         await OneSignal.init({
           appId,
-          allowLocalhostAsSecureOrigin: true,
-          notifyButton: { enable: false },
           serviceWorkerParam: { scope: '/' },
           promptOptions: {
             slidedown: {
@@ -91,20 +86,16 @@ export default function App() {
                 type: 'push',
                 autoPrompt: true,
                 text: {
-                  actionMessage: 'Dorești să primești notificări despre pacienți și vizite?',
-                  acceptButton: 'Da, acceptă',
-                  cancelButton: 'Nu acum'
+                  actionMessage: 'Dorești notificări despre pacienți și vizite?',
+                  acceptButton: 'Da',
+                  cancelButton: 'Nu'
                 },
-                delay: {
-                  pageViews: 1,
-                  timeDelay: 3
-                }
+                delay: { pageViews: 1, timeDelay: 3 }
               }]
             }
           }
         });
         console.log('[OneSignal] Init done');
-
         OneSignal.Notifications.requestPermission().then(permission => {
           console.log('[OneSignal] Permission:', permission);
         }).catch(err => {
