@@ -15,13 +15,17 @@ function urlBase64ToUint8Array(base64String) {
 async function registerPushSubscription() {
   if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
   try {
-    const swReg = await navigator.serviceWorker.ready;
+    const registration = await navigator.serviceWorker.ready;
     const { data } = await getVapidPublicKey();
-    const subscription = await swReg.pushManager.subscribe({
+    const existingSubscription = await registration.pushManager.getSubscription();
+    if (existingSubscription) {
+      await existingSubscription.unsubscribe();
+    }
+    const newSubscription = await registration.pushManager.subscribe({
       userVisibleOnly: true,
       applicationServerKey: urlBase64ToUint8Array(data.publicKey)
     });
-    await subscribeToPush(subscription.toJSON());
+    await subscribeToPush(newSubscription.toJSON());
     console.log('[Push] Subscription înregistrată');
   } catch (err) {
     console.warn('[Push] Subscription error:', err.message);
