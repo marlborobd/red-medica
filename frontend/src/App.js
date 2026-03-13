@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Layout from './components/Layout';
@@ -27,25 +27,6 @@ function AdminRoute({ children }) {
 function AppRoutes() {
   const { user } = useAuth();
 
-  // Sincronizează user-ul cu OneSignal (external_id = email)
-  useEffect(() => {
-    window.OneSignalDeferred = window.OneSignalDeferred || [];
-    window.OneSignalDeferred.push(async function(OneSignal) {
-      try {
-        if (user && user.email) {
-          console.log('[OneSignal] Login cu email:', user.email);
-          await OneSignal.login(user.email);
-          console.log('[OneSignal] Login reușit');
-        } else {
-          await OneSignal.logout();
-          console.log('[OneSignal] Logout efectuat');
-        }
-      } catch (err) {
-        console.error('[OneSignal] Eroare login:', err);
-      }
-    });
-  }, [user]);
-
   return (
     <Routes>
       <Route path="/login" element={user ? <Navigate to="/" replace /> : <Login />} />
@@ -65,48 +46,6 @@ function AppRoutes() {
 }
 
 export default function App() {
-  // Inițializează OneSignal o singură dată
-  useEffect(() => {
-    const appId = process.env.REACT_APP_ONESIGNAL_APP_ID;
-    console.log('[OneSignal] REACT_APP_ONESIGNAL_APP_ID:', appId ? appId : 'LIPSEȘTE - setați în Railway Variables');
-    if (!appId) {
-      console.error('[OneSignal] App ID lipsă - OneSignal nu se va inițializa!');
-      return;
-    }
-    window.OneSignalDeferred = window.OneSignalDeferred || [];
-    window.OneSignalDeferred.push(async function(OneSignal) {
-      try {
-        console.log('[OneSignal] Init start, appId:', appId);
-        await OneSignal.init({
-          appId,
-          serviceWorkerParam: { scope: '/' },
-          promptOptions: {
-            slidedown: {
-              prompts: [{
-                type: 'push',
-                autoPrompt: true,
-                text: {
-                  actionMessage: 'Dorești notificări despre pacienți și vizite?',
-                  acceptButton: 'Da',
-                  cancelButton: 'Nu'
-                },
-                delay: { pageViews: 1, timeDelay: 3 }
-              }]
-            }
-          }
-        });
-        console.log('[OneSignal] Init done');
-        OneSignal.Notifications.requestPermission().then(permission => {
-          console.log('[OneSignal] Permission:', permission);
-        }).catch(err => {
-          console.error('[OneSignal] requestPermission eroare:', err);
-        });
-      } catch (err) {
-        console.error('[OneSignal] Eroare init:', err);
-      }
-    });
-  }, []);
-
   return (
     <BrowserRouter>
       <AuthProvider>

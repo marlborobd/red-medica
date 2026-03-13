@@ -19,11 +19,6 @@ export default function Login() {
     try {
       const { data } = await loginApi(email, password);
       login(data.user, data.token);
-      window.OneSignalDeferred = window.OneSignalDeferred || [];
-      window.OneSignalDeferred.push(async function(OneSignal) {
-        await OneSignal.login(email);
-        console.log('[OneSignal] Login done:', email);
-      });
       navigate('/');
     } catch (err) {
       setError(err.response?.data?.error || 'Email sau parolă incorectă. Verificați datele și încercați din nou.');

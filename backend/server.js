@@ -5,6 +5,7 @@ const path = require('path');
 const { initDatabase } = require('./database');
 
 const authRoutes = require('./routes/auth');
+const notificariRoutes = require('./routes/notificari');
 const patientRoutes = require('./routes/patients');
 const visitRoutes = require('./routes/visits');
 const reportRoutes = require('./routes/reports');
@@ -43,22 +44,9 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// ===== Test notificări OneSignal =====
-app.get('/api/notifications/test', async (req, res) => {
-  const { sendToAll } = require('./notifications');
-  const result = await sendToAll({
-    title: 'Test Red Medica',
-    body: 'Test Red Medica functioneaza'
-  });
-  res.json({
-    success: !!result,
-    statusCode: result ? result.statusCode : null,
-    onesignal: result ? result.data : null
-  });
-});
-
 // ===== API Routes =====
 app.use('/api/auth', authRoutes);
+app.use('/api/notificari', notificariRoutes);
 app.use('/api/patients', patientRoutes);
 app.use('/api/visits', visitRoutes);
 app.use('/api/reports', reportRoutes);

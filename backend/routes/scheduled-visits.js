@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { getDb } = require('../database');
 const { authenticate } = require('../middleware/auth');
-const { sendToUser, sendToAdmins } = require('../notifications');
+const { sendNotification, sendToAdmins } = require('../notifications');
 
 // GET / — toate vizitele programate
 router.get('/', authenticate, (req, res) => {
@@ -51,12 +51,7 @@ router.post('/', authenticate, (req, res) => {
   // Notifica angajatul responsabil
   const responsabilUser = db.prepare('SELECT email FROM users WHERE id = ?').get(responsabilId);
   if (responsabilUser) {
-    sendToUser(responsabilUser.email, {
-      title: 'Vizita programata',
-      body: `Vizita pentru pacientul ${patient.nume} pe ${data_programata} la ${ora_programata}.`,
-      url: `/pacienti/${pacient_id}`,
-      tag: 'scheduled-' + result.lastInsertRowid
-    });
+    sendNotification(responsabilUser.email, 'Vizita programata', `Vizita pentru pacientul ${patient.nume} pe ${data_programata} la ${ora_programata}.`);
   }
 
   res.status(201).json({ id: result.lastInsertRowid });
@@ -87,12 +82,7 @@ router.put('/:id/efectuat', authenticate, (req, res) => {
   );
 
   const patient = db.prepare('SELECT nume FROM patients WHERE id = ?').get(scheduled.pacient_id);
-  sendToAdmins({
-    title: 'Vizita efectuata',
-    body: `Vizita programata pentru ${patient ? patient.nume : 'pacient'} a fost efectuata.`,
-    url: `/pacienti/${scheduled.pacient_id}`,
-    tag: 'done-' + scheduled.id
-  });
+  sendToAdmins('Vizita efectuata', `Vizita programata pentru ${patient ? patient.nume : 'pacient'} a fost efectuata.`);
 
   res.json({ success: true, visit_id: visitResult.lastInsertRowid });
 });
@@ -132,12 +122,7 @@ async function sendMorningNotifications() {
 
     for (const [userEmail, visits] of Object.entries(byEmployee)) {
       const names = visits.map(v => `${v.pacient_name} (${v.ora_programata})`).join(', ');
-      await sendToUser(userEmail, {
-        title: `Ai ${visits.length} vizite programate azi`,
-        body: `Pacienti: ${names}`,
-        url: '/',
-        tag: 'morning-' + today
-      });
+      await sendNotification(userEmail, `Ai ${visits.length} vizite programate azi`, `Pacienti: ${names}`);
     }
     console.log(`✓ [Notificari] Trimise pentru ${Object.keys(byEmployee).length} angajati`);
   } catch (err) {

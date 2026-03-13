@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { getDb } = require('../database');
 const { authenticate, requireAdmin } = require('../middleware/auth');
-const { sendToUser, sendToAdmins } = require('../notifications');
+const { sendNotification, sendToAdmins } = require('../notifications');
 
 router.get('/', authenticate, (req, res) => {
   const db = getDb();
@@ -96,20 +96,10 @@ router.post('/', authenticate, (req, res) => {
   if (redirectId) {
     const redirectUser = db.prepare('SELECT email FROM users WHERE id = ?').get(redirectId);
     if (redirectUser) {
-      sendToUser(redirectUser.email, {
-        title: 'Pacient nou redirectionat catre tine',
-        body: `Pacient: ${patientName}. Te rog sa accepti sau sa refuzi.`,
-        url: '/',
-        tag: 'pending-' + patientId
-      });
+      sendNotification(redirectUser.email, 'Pacient nou redirectionat catre tine', `Pacient: ${patientName}. Te rog sa accepti sau sa refuzi.`);
     }
   }
-  sendToAdmins({
-    title: 'Pacient nou adaugat',
-    body: `Pacient: ${patientName} de catre ${creatorName}.`,
-    url: '/pacienti/' + patientId,
-    tag: 'new-patient-' + patientId
-  });
+  sendToAdmins('Pacient nou adaugat', `Pacient: ${patientName} de catre ${creatorName}.`);
 
   res.status(201).json({ id: patientId });
 });
@@ -156,19 +146,9 @@ router.put('/:id/status', authenticate, (req, res) => {
   db.prepare('UPDATE patients SET status_preluare = ? WHERE id = ?').run(status, req.params.id);
 
   if (status === 'REFUZAT') {
-    sendToAdmins({
-      title: 'Pacient refuzat',
-      body: `Angajatul ${req.user.name} a refuzat pacientul ${patient.nume}. Te rugam sa redistribui pacientul.`,
-      url: '/',
-      tag: 'refused-' + patient.id
-    });
+    sendToAdmins('Pacient refuzat', `Angajatul ${req.user.name} a refuzat pacientul ${patient.nume}. Te rugam sa redistribui pacientul.`);
   } else if (status === 'ACCEPTAT') {
-    sendToAdmins({
-      title: 'Pacient acceptat',
-      body: `Angajatul ${req.user.name} a acceptat pacientul ${patient.nume}.`,
-      url: '/pacienti/' + patient.id,
-      tag: 'accepted-' + patient.id
-    });
+    sendToAdmins('Pacient acceptat', `Angajatul ${req.user.name} a acceptat pacientul ${patient.nume}.`);
   }
 
   res.json({ success: true });
@@ -190,12 +170,7 @@ router.put('/:id/redistribuie', authenticate, (req, res) => {
 
   const redirectUser = db.prepare('SELECT email FROM users WHERE id = ?').get(redirectId);
   if (redirectUser) {
-    sendToUser(redirectUser.email, {
-      title: 'Pacient redistribut catre tine',
-      body: `Pacient: ${patient.nume}. Te rog sa accepti sau sa refuzi.`,
-      url: '/',
-      tag: 'pending-' + patient.id
-    });
+    sendNotification(redirectUser.email, 'Pacient redistribut catre tine', `Pacient: ${patient.nume}. Te rog sa accepti sau sa refuzi.`);
   }
 
   res.json({ success: true });

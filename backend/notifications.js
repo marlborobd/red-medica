@@ -1,74 +1,31 @@
 const { getDb } = require('./database');
 
-const ONESIGNAL_URL = 'https://onesignal.com/api/v1/notifications';
-
-async function sendNotification(body) {
-  const appId = process.env.ONESIGNAL_APP_ID;
-  const apiKey = process.env.ONESIGNAL_API_KEY;
-
-  if (!appId || !apiKey) {
-    console.log('[OneSignal] ONESIGNAL_APP_ID sau ONESIGNAL_API_KEY lipsesc. Notificare omisă.');
-    return null;
-  }
-
-  const requestBody = JSON.stringify({ app_id: appId, ...body });
-  console.log('[OneSignal] → URL:', ONESIGNAL_URL);
-  console.log('[OneSignal] → Headers: Content-Type: application/json | Authorization: Basic ' + apiKey.substring(0, 10) + '...');
-  console.log('[OneSignal] → Body:', requestBody);
-
+// Inserează o notificare în tabela notificari pentru un utilizator specific
+async function sendNotification(userEmail, titlu, mesaj) {
   try {
-    const res = await fetch(ONESIGNAL_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Basic ' + apiKey
-      },
-      body: requestBody
-    });
-
-    const statusCode = res.status;
-    const data = await res.json();
-    console.log('[OneSignal] ← Status:', statusCode);
-    console.log('[OneSignal] ← Răspuns complet:', JSON.stringify(data));
-    return { statusCode, data };
+    const db = getDb();
+    db.prepare(
+      'INSERT INTO notificari (user_email, titlu, mesaj) VALUES (?, ?, ?)'
+    ).run(userEmail, titlu, mesaj);
+    console.log(`[Notificari] → ${userEmail}: ${titlu}`);
   } catch (err) {
-    console.error('[OneSignal] ← Eroare fetch:', err.message);
-    return null;
+    console.error('[Notificari] Eroare sendNotification:', err.message);
   }
-}
-
-// Trimite notificare unui utilizator specific (după external_id = email)
-async function sendToUser(email, { title, body, url, tag }) {
-  return await sendNotification({
-    include_aliases: { external_id: [email] },
-    target_channel: 'push',
-    headings: { en: 'Red Medica', ro: title },
-    contents: { en: body, ro: body },
-    url: url || '/',
-    ...(tag ? { collapse_id: tag } : {})
-  });
 }
 
 // Trimite notificare tuturor administratorilor activi
-async function sendToAdmins({ title, body, url, tag }) {
+async function sendToAdmins(titlu, mesaj) {
   try {
     const db = getDb();
-    const admins = db.prepare("SELECT email FROM users WHERE role = 'admin' AND active = 1").all();
+    const admins = db.prepare(
+      "SELECT email FROM users WHERE role = 'admin' AND active = 1"
+    ).all();
     for (const admin of admins) {
-      await sendToUser(admin.email, { title, body, url, tag });
+      await sendNotification(admin.email, titlu, mesaj);
     }
   } catch (err) {
-    console.error('[OneSignal] sendToAdmins eroare:', err.message);
+    console.error('[Notificari] sendToAdmins eroare:', err.message);
   }
 }
 
-// Trimite notificare tuturor utilizatorilor (folosit pentru test)
-async function sendToAll({ title, body }) {
-  return await sendNotification({
-    included_segments: ['All'],
-    headings: { en: 'Red Medica', ro: title },
-    contents: { en: body, ro: body }
-  });
-}
-
-module.exports = { sendToUser, sendToAdmins, sendToAll };
+module.exports = { sendNotification, sendToAdmins };

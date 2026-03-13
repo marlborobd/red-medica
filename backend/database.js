@@ -175,6 +175,26 @@ function migratePushSubscriptions() {
   }
 }
 
+// ===== Migrare: creare tabelă notificari =====
+function migrateNotificari() {
+  try {
+    sqlJsDb.exec(`
+      CREATE TABLE IF NOT EXISTS notificari (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_email TEXT NOT NULL,
+        titlu TEXT NOT NULL,
+        mesaj TEXT NOT NULL,
+        citita INTEGER DEFAULT 0,
+        created_at TEXT DEFAULT (datetime('now', 'localtime'))
+      )
+    `);
+    saveDb();
+    console.log('✓ Migration: tabela notificari creata');
+  } catch (err) {
+    console.error('[Migration notificari]', err.message);
+  }
+}
+
 async function initDatabase() {
   const dbDir = path.dirname(DB_PATH);
   if (!fs.existsSync(dbDir)) {
@@ -246,6 +266,15 @@ async function initDatabase() {
       FOREIGN KEY (user_id) REFERENCES users(id)
     );
 
+    CREATE TABLE IF NOT EXISTS notificari (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_email TEXT NOT NULL,
+      titlu TEXT NOT NULL,
+      mesaj TEXT NOT NULL,
+      citita INTEGER DEFAULT 0,
+      created_at TEXT DEFAULT (datetime('now', 'localtime'))
+    );
+
     CREATE TABLE IF NOT EXISTS visits (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       patient_id INTEGER NOT NULL,
@@ -280,6 +309,7 @@ async function initDatabase() {
   migrateRedirectionatCatreId();
   migrateViziteProgramate();
   migratePushSubscriptions();
+  migrateNotificari();
 
   // Admin
   const adminEmail = process.env.ADMIN_EMAIL || 'admin@asistenta.ro';

@@ -4,6 +4,7 @@ const { getDb } = require('../database');
 const { authenticate } = require('../middleware/auth');
 const { sendToAdmins } = require('../notifications');
 
+
 router.get('/patient/:patientId', authenticate, (req, res) => {
   const db = getDb();
   const patient = db.prepare('SELECT id FROM patients WHERE id = ?').get(req.params.patientId);
@@ -69,12 +70,7 @@ router.post('/', authenticate, (req, res) => {
 
   // Notifica adminii
   const patientRow = db.prepare('SELECT nume FROM patients WHERE id = ?').get(patient_id);
-  sendToAdmins({
-    title: 'Vizita noua creata',
-    body: `Vizita pentru pacientul ${patientRow ? patientRow.nume : '#' + patient_id} de catre ${req.user.name}.`,
-    url: '/pacienti/' + patient_id,
-    tag: 'new-visit-' + visitId
-  });
+  sendToAdmins('Vizita noua creata', `Vizita pentru pacientul ${patientRow ? patientRow.nume : '#' + patient_id} de catre ${req.user.name}.`);
 
   res.status(201).json({ id: visitId });
 });

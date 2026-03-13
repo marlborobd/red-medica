@@ -60,9 +60,10 @@ export const createScheduledVisit = (data) => api.post('/scheduled-visits', data
 export const markScheduledEffectuata = (id) => api.put(`/scheduled-visits/${id}/efectuat`);
 export const deleteScheduledVisit = (id) => api.delete(`/scheduled-visits/${id}`);
 
-// Push notifications
-export const getVapidPublicKey = () => api.get('/push/vapid-public-key');
-export const subscribeToPush = (subscription) => api.post('/push/subscribe', subscription);
+// Notificări in-app
+export const getNotificari = () => api.get('/notificari');
+export const markNotificareaCitita = (id) => api.put(`/notificari/${id}/citita`);
+export const markToateNotificariCitite = () => api.put('/notificari/citeste-toate');
 
 // Reports
 export const getReportSummary = () => api.get('/reports/summary');
