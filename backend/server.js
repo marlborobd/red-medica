@@ -46,11 +46,15 @@ app.get('/api/health', (req, res) => {
 // ===== Test notificări OneSignal =====
 app.get('/api/notifications/test', async (req, res) => {
   const { sendToAll } = require('./notifications');
-  const data = await sendToAll({
+  const result = await sendToAll({
     title: 'Test Red Medica',
     body: 'Test Red Medica functioneaza'
   });
-  res.json({ success: true, onesignal: data });
+  res.json({
+    success: !!result,
+    statusCode: result ? result.statusCode : null,
+    onesignal: result ? result.data : null
+  });
 });
 
 // ===== API Routes =====
@@ -119,6 +123,8 @@ initDatabase()
     app.listen(PORT, '0.0.0.0', () => {
       console.log(`✓ Server pornit pe portul ${PORT}`);
       console.log(`✓ Mediu: ${process.env.NODE_ENV || 'development'}`);
+      console.log('ONESIGNAL_APP_ID:', process.env.ONESIGNAL_APP_ID ? 'setat' : 'LIPSEȘTE');
+      console.log('ONESIGNAL_API_KEY:', process.env.ONESIGNAL_API_KEY ? 'setat' : 'LIPSEȘTE');
       if (!IS_PROD) {
         console.log(`✓ API: http://localhost:${PORT}/api`);
       }

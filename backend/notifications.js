@@ -11,6 +11,11 @@ async function sendNotification(body) {
     return null;
   }
 
+  const requestBody = JSON.stringify({ app_id: appId, ...body });
+  console.log('[OneSignal] → URL:', ONESIGNAL_URL);
+  console.log('[OneSignal] → Headers: Content-Type: application/json | Authorization: Basic ' + apiKey.substring(0, 10) + '...');
+  console.log('[OneSignal] → Body:', requestBody);
+
   try {
     const res = await fetch(ONESIGNAL_URL, {
       method: 'POST',
@@ -18,14 +23,16 @@ async function sendNotification(body) {
         'Content-Type': 'application/json',
         'Authorization': 'Basic ' + apiKey
       },
-      body: JSON.stringify({ app_id: appId, ...body })
+      body: requestBody
     });
 
+    const statusCode = res.status;
     const data = await res.json();
-    console.log('[OneSignal] Răspuns complet:', JSON.stringify(data));
-    return data;
+    console.log('[OneSignal] ← Status:', statusCode);
+    console.log('[OneSignal] ← Răspuns complet:', JSON.stringify(data));
+    return { statusCode, data };
   } catch (err) {
-    console.error('[OneSignal] Eroare fetch:', err.message);
+    console.error('[OneSignal] ← Eroare fetch:', err.message);
     return null;
   }
 }
