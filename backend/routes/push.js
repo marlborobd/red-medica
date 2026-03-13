@@ -62,6 +62,12 @@ function initVapid() {
     vapidKeys.publicKey,
     vapidKeys.privateKey
   );
+
+  console.log('\n=== VAPID KEYS DIN FISIER ===');
+  console.log('VAPID_PUBLIC_KEY=' + vapidKeys.publicKey);
+  console.log('VAPID_PRIVATE_KEY=' + vapidKeys.privateKey);
+  console.log('REACT_APP_VAPID_PUBLIC_KEY=' + vapidKeys.publicKey);
+  console.log('=== COPIAZA IN RAILWAY VARIABLES ===\n');
 }
 
 initVapid();
