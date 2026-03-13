@@ -41,7 +41,7 @@ export default function Login() {
         {/* Logo centrat */}
         <div className="login-logo">
           <img
-            src={process.env.REACT_APP_LOGO_URL || '/logo.png'}
+            src="/logo.png"
             alt="Red Medica"
             className="login-logo-img"
             style={{ width: 120, height: 120, objectFit: 'contain' }}

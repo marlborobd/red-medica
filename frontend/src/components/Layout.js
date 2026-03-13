@@ -68,7 +68,7 @@ export default function Layout() {
 
         <div className="mobile-logo-center">
           <img
-            src={process.env.REACT_APP_LOGO_URL || '/logo.png'}
+            src="/logo.png"
             alt="Red Medica"
             className="mobile-logo-img"
             style={{ width: 40, height: 40, objectFit: 'contain' }}
@@ -90,7 +90,7 @@ export default function Layout() {
       <aside className={`sidebar ${sidebarOpen ? 'open' : ''}`} role="navigation">
         <div className="sidebar-logo" style={{ flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
           <img
-            src={process.env.REACT_APP_LOGO_URL || '/logo.png'}
+            src="/logo.png"
             alt="Red Medica"
             className="sidebar-logo-img"
             style={{ width: 80, height: 80, objectFit: 'contain', marginBottom: 8 }}

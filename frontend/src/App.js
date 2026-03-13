@@ -27,17 +27,22 @@ function AdminRoute({ children }) {
 function AppRoutes() {
   const { user } = useAuth();
 
-  // Sincronizează user-ul cu OneSignal (external_id = user.id din DB)
+  // Sincronizează user-ul cu OneSignal (external_id = email)
   useEffect(() => {
     if (!window.OneSignalDeferred) return;
     window.OneSignalDeferred.push(async function(OneSignal) {
       try {
-        if (user && user.id) {
-          await OneSignal.login(String(user.id));
+        if (user && user.email) {
+          console.log('[OneSignal] Login cu email:', user.email);
+          await OneSignal.login(user.email);
+          console.log('[OneSignal] Login reușit');
         } else {
           await OneSignal.logout();
+          console.log('[OneSignal] Logout efectuat');
         }
-      } catch (_) {}
+      } catch (err) {
+        console.error('[OneSignal] Eroare login:', err);
+      }
     });
   }, [user]);
 
@@ -63,9 +68,18 @@ export default function App() {
   // Inițializează OneSignal o singură dată
   useEffect(() => {
     const appId = process.env.REACT_APP_ONESIGNAL_APP_ID;
-    if (!appId || !window.OneSignalDeferred) return;
+    console.log('[OneSignal] REACT_APP_ONESIGNAL_APP_ID:', appId ? appId : 'LIPSEȘTE - setați în Railway Variables');
+    if (!appId) {
+      console.error('[OneSignal] App ID lipsă - OneSignal nu se va inițializa!');
+      return;
+    }
+    if (!window.OneSignalDeferred) {
+      console.error('[OneSignal] window.OneSignalDeferred lipsă - SDK-ul nu s-a încărcat!');
+      return;
+    }
     window.OneSignalDeferred.push(async function(OneSignal) {
       try {
+        console.log('[OneSignal] Init start, appId:', appId);
         await OneSignal.init({
           appId,
           allowLocalhostAsSecureOrigin: true,
@@ -89,7 +103,16 @@ export default function App() {
             }
           }
         });
-      } catch (_) {}
+        console.log('[OneSignal] Init done');
+
+        OneSignal.Notifications.requestPermission().then(permission => {
+          console.log('[OneSignal] Permission:', permission);
+        }).catch(err => {
+          console.error('[OneSignal] requestPermission eroare:', err);
+        });
+      } catch (err) {
+        console.error('[OneSignal] Eroare init:', err);
+      }
     });
   }, []);
 
