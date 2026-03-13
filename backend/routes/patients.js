@@ -159,6 +159,13 @@ router.put('/:id/status', authenticate, (req, res) => {
       url: '/',
       tag: 'refused-' + patient.id
     });
+  } else if (status === 'ACCEPTAT') {
+    sendToAdmins({
+      title: 'Pacient acceptat',
+      body: `Angajatul ${req.user.name} a acceptat pacientul ${patient.nume}.`,
+      url: '/pacienti/' + patient.id,
+      tag: 'accepted-' + patient.id
+    });
   }
 
   res.json({ success: true });

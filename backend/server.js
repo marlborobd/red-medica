@@ -43,6 +43,16 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+// ===== Test notificări OneSignal =====
+app.get('/api/notifications/test', async (req, res) => {
+  const { sendToAll } = require('./notifications');
+  const data = await sendToAll({
+    title: 'Test Red Medica',
+    body: 'Test Red Medica functioneaza'
+  });
+  res.json({ success: true, onesignal: data });
+});
+
 // ===== API Routes =====
 app.use('/api/auth', authRoutes);
 app.use('/api/patients', patientRoutes);

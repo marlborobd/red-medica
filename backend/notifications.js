@@ -8,39 +8,34 @@ async function sendNotification(body) {
 
   if (!appId || !apiKey) {
     console.log('[OneSignal] ONESIGNAL_APP_ID sau ONESIGNAL_API_KEY lipsesc. Notificare omisă.');
-    return;
+    return null;
   }
 
   try {
     const res = await fetch(ONESIGNAL_URL, {
       method: 'POST',
       headers: {
-        'Authorization': `Key ${apiKey}`,
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'Authorization': 'Basic ' + apiKey
       },
       body: JSON.stringify({ app_id: appId, ...body })
     });
 
     const data = await res.json();
-
-    if (data.errors && data.errors.length > 0) {
-      // "All included players are not subscribed" e normal dacă user-ul nu e abonat
-      const ignorabile = data.errors.every(e => typeof e === 'string' && e.includes('subscribed'));
-      if (!ignorabile) {
-        console.error('[OneSignal] Eroare notificare:', JSON.stringify(data.errors));
-      }
-    }
+    console.log('[OneSignal] Răspuns complet:', JSON.stringify(data));
+    return data;
   } catch (err) {
     console.error('[OneSignal] Eroare fetch:', err.message);
+    return null;
   }
 }
 
 // Trimite notificare unui utilizator specific (după external_id = user.id din DB)
 async function sendToUser(userId, { title, body, url, tag }) {
-  await sendNotification({
-    include_external_user_ids: [String(userId)],
+  return await sendNotification({
+    include_aliases: { external_id: [String(userId)] },
     target_channel: 'push',
-    headings: { en: title, ro: title },
+    headings: { en: 'Red Medica', ro: title },
     contents: { en: body, ro: body },
     url: url || '/',
     ...(tag ? { collapse_id: tag } : {})
@@ -60,4 +55,13 @@ async function sendToAdmins({ title, body, url, tag }) {
   }
 }
 
-module.exports = { sendToUser, sendToAdmins };
+// Trimite notificare tuturor utilizatorilor (folosit pentru test)
+async function sendToAll({ title, body }) {
+  return await sendNotification({
+    included_segments: ['All'],
+    headings: { en: 'Red Medica', ro: title },
+    contents: { en: body, ro: body }
+  });
+}
+
+module.exports = { sendToUser, sendToAdmins, sendToAll };

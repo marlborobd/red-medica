@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { getDb } = require('../database');
 const { authenticate } = require('../middleware/auth');
-const { sendToAdmins } = require('./push');
+const { sendToAdmins } = require('../notifications');
 
 router.get('/patient/:patientId', authenticate, (req, res) => {
   const db = getDb();
