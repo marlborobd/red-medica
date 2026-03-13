@@ -37,10 +37,10 @@ async function sendNotification(body) {
   }
 }
 
-// Trimite notificare unui utilizator specific (după external_id = user.id din DB)
-async function sendToUser(userId, { title, body, url, tag }) {
+// Trimite notificare unui utilizator specific (după external_id = email)
+async function sendToUser(email, { title, body, url, tag }) {
   return await sendNotification({
-    include_aliases: { external_id: [String(userId)] },
+    include_aliases: { external_id: [email] },
     target_channel: 'push',
     headings: { en: 'Red Medica', ro: title },
     contents: { en: body, ro: body },
@@ -53,9 +53,9 @@ async function sendToUser(userId, { title, body, url, tag }) {
 async function sendToAdmins({ title, body, url, tag }) {
   try {
     const db = getDb();
-    const admins = db.prepare("SELECT id FROM users WHERE role = 'admin' AND active = 1").all();
+    const admins = db.prepare("SELECT email FROM users WHERE role = 'admin' AND active = 1").all();
     for (const admin of admins) {
-      await sendToUser(admin.id, { title, body, url, tag });
+      await sendToUser(admin.email, { title, body, url, tag });
     }
   } catch (err) {
     console.error('[OneSignal] sendToAdmins eroare:', err.message);

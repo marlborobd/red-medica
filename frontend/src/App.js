@@ -69,7 +69,25 @@ export default function App() {
         await OneSignal.init({
           appId,
           allowLocalhostAsSecureOrigin: true,
-          notifyButton: { enable: false }
+          notifyButton: { enable: false },
+          serviceWorkerParam: { scope: '/' },
+          promptOptions: {
+            slidedown: {
+              prompts: [{
+                type: 'push',
+                autoPrompt: true,
+                text: {
+                  actionMessage: 'Dorești să primești notificări despre pacienți și vizite?',
+                  acceptButton: 'Da, acceptă',
+                  cancelButton: 'Nu acum'
+                },
+                delay: {
+                  pageViews: 1,
+                  timeDelay: 3
+                }
+              }]
+            }
+          }
         });
       } catch (_) {}
     });

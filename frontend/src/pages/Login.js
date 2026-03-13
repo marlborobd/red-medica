@@ -19,6 +19,14 @@ export default function Login() {
     try {
       const { data } = await loginApi(email, password);
       login(data.user, data.token);
+      if (window.OneSignalDeferred) {
+        window.OneSignalDeferred.push(async function(OneSignal) {
+          try {
+            await OneSignal.login(email);
+            await OneSignal.User.PushSubscription.optIn();
+          } catch (_) {}
+        });
+      }
       navigate('/');
     } catch (err) {
       setError(err.response?.data?.error || 'Email sau parolă incorectă. Verificați datele și încercați din nou.');

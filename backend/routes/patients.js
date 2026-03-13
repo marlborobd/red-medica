@@ -94,12 +94,15 @@ router.post('/', authenticate, (req, res) => {
 
   // Notificari push (async, nu blocam raspunsul)
   if (redirectId) {
-    sendToUser(redirectId, {
-      title: 'Pacient nou redirectionat catre tine',
-      body: `Pacient: ${patientName}. Te rog sa accepti sau sa refuzi.`,
-      url: '/',
-      tag: 'pending-' + patientId
-    });
+    const redirectUser = db.prepare('SELECT email FROM users WHERE id = ?').get(redirectId);
+    if (redirectUser) {
+      sendToUser(redirectUser.email, {
+        title: 'Pacient nou redirectionat catre tine',
+        body: `Pacient: ${patientName}. Te rog sa accepti sau sa refuzi.`,
+        url: '/',
+        tag: 'pending-' + patientId
+      });
+    }
   }
   sendToAdmins({
     title: 'Pacient nou adaugat',
@@ -185,12 +188,15 @@ router.put('/:id/redistribuie', authenticate, (req, res) => {
   db.prepare('UPDATE patients SET status_preluare = ?, redirectionat_catre_id = ? WHERE id = ?')
     .run('PENDING', redirectId, req.params.id);
 
-  sendToUser(redirectId, {
-    title: 'Pacient redistribut catre tine',
-    body: `Pacient: ${patient.nume}. Te rog sa accepti sau sa refuzi.`,
-    url: '/',
-    tag: 'pending-' + patient.id
-  });
+  const redirectUser = db.prepare('SELECT email FROM users WHERE id = ?').get(redirectId);
+  if (redirectUser) {
+    sendToUser(redirectUser.email, {
+      title: 'Pacient redistribut catre tine',
+      body: `Pacient: ${patient.nume}. Te rog sa accepti sau sa refuzi.`,
+      url: '/',
+      tag: 'pending-' + patient.id
+    });
+  }
 
   res.json({ success: true });
 });

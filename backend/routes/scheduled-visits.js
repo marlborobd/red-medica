@@ -49,12 +49,15 @@ router.post('/', authenticate, (req, res) => {
   `).run(pacient_id, data_programata, ora_programata, responsabilId);
 
   // Notifica angajatul responsabil
-  sendToUser(responsabilId, {
-    title: 'Vizita programata',
-    body: `Vizita pentru pacientul ${patient.nume} pe ${data_programata} la ${ora_programata}.`,
-    url: `/pacienti/${pacient_id}`,
-    tag: 'scheduled-' + result.lastInsertRowid
-  });
+  const responsabilUser = db.prepare('SELECT email FROM users WHERE id = ?').get(responsabilId);
+  if (responsabilUser) {
+    sendToUser(responsabilUser.email, {
+      title: 'Vizita programata',
+      body: `Vizita pentru pacientul ${patient.nume} pe ${data_programata} la ${ora_programata}.`,
+      url: `/pacienti/${pacient_id}`,
+      tag: 'scheduled-' + result.lastInsertRowid
+    });
+  }
 
   res.status(201).json({ id: result.lastInsertRowid });
 });
@@ -112,7 +115,7 @@ async function sendMorningNotifications() {
     const db = getDb();
     const today = new Date().toISOString().split('T')[0];
     const todayVisits = db.prepare(`
-      SELECT vp.*, p.nume as pacient_name, u.id as user_id
+      SELECT vp.*, p.nume as pacient_name, u.email as user_email
       FROM vizite_programate vp
       LEFT JOIN patients p ON vp.pacient_id = p.id
       LEFT JOIN users u ON vp.angajat_responsabil = u.id
@@ -123,13 +126,13 @@ async function sendMorningNotifications() {
     // Grupeaza dupa angajat
     const byEmployee = {};
     for (const v of todayVisits) {
-      if (!byEmployee[v.angajat_responsabil]) byEmployee[v.angajat_responsabil] = [];
-      byEmployee[v.angajat_responsabil].push(v);
+      if (!byEmployee[v.user_email]) byEmployee[v.user_email] = [];
+      byEmployee[v.user_email].push(v);
     }
 
-    for (const [userId, visits] of Object.entries(byEmployee)) {
+    for (const [userEmail, visits] of Object.entries(byEmployee)) {
       const names = visits.map(v => `${v.pacient_name} (${v.ora_programata})`).join(', ');
-      await sendToUser(parseInt(userId), {
+      await sendToUser(userEmail, {
         title: `Ai ${visits.length} vizite programate azi`,
         body: `Pacienti: ${names}`,
         url: '/',
