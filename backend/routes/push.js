@@ -3,21 +3,60 @@ const router = express.Router();
 const webpush = require('web-push');
 const { getDb } = require('../database');
 const { authenticate } = require('../middleware/auth');
+const fs = require('fs');
+const path = require('path');
+
+const VAPID_FILE = process.env.DATABASE_PATH
+  ? path.join(path.dirname(process.env.DATABASE_PATH), 'vapid_keys.json')
+  : path.join(__dirname, '..', 'vapid_keys.json');
 
 let vapidKeys = null;
 
+function isValidVapidKey(key) {
+  // Cheile VAPID sunt base64url de 65 bytes (public) sau 32 bytes (private)
+  return typeof key === 'string' && key.length >= 40;
+}
+
 function initVapid() {
-  if (process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
+  // 1. Încearcă din variabile de mediu
+  if (
+    process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY &&
+    isValidVapidKey(process.env.VAPID_PUBLIC_KEY) &&
+    isValidVapidKey(process.env.VAPID_PRIVATE_KEY)
+  ) {
     vapidKeys = {
       publicKey: process.env.VAPID_PUBLIC_KEY,
       privateKey: process.env.VAPID_PRIVATE_KEY
     };
-  } else {
-    vapidKeys = webpush.generateVAPIDKeys();
-    console.log('\n[PUSH] VAPID keys generate. Adauga in .env pentru persistenta:');
-    console.log('VAPID_PUBLIC_KEY=' + vapidKeys.publicKey);
-    console.log('VAPID_PRIVATE_KEY=' + vapidKeys.privateKey + '\n');
+    console.log('[PUSH] VAPID keys încărcate din environment variables');
+
+  // 2. Încearcă din fișierul persistent
+  } else if (fs.existsSync(VAPID_FILE)) {
+    try {
+      const saved = JSON.parse(fs.readFileSync(VAPID_FILE, 'utf8'));
+      if (isValidVapidKey(saved.publicKey) && isValidVapidKey(saved.privateKey)) {
+        vapidKeys = saved;
+        console.log('[PUSH] VAPID keys încărcate din', VAPID_FILE);
+      }
+    } catch (_) {}
   }
+
+  // 3. Generează chei noi dacă nu există sau sunt invalide
+  if (!vapidKeys) {
+    vapidKeys = webpush.generateVAPIDKeys();
+    try {
+      const dir = path.dirname(VAPID_FILE);
+      if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+      fs.writeFileSync(VAPID_FILE, JSON.stringify(vapidKeys, null, 2));
+    } catch (err) {
+      console.error('[PUSH] Nu s-au putut salva VAPID keys:', err.message);
+    }
+    console.log('\n=== VAPID KEYS GENERATE ===');
+    console.log('VAPID_PUBLIC_KEY=' + vapidKeys.publicKey);
+    console.log('VAPID_PRIVATE_KEY=' + vapidKeys.privateKey);
+    console.log('=== ADAUGA IN RAILWAY VARIABLES ===\n');
+  }
+
   webpush.setVapidDetails(
     process.env.VAPID_EMAIL || 'mailto:admin@redmedica.ro',
     vapidKeys.publicKey,
