@@ -95,6 +95,30 @@ async function sendToAdmins(payload) {
   }
 }
 
+// Trimite push unui utilizator specific după email
+async function sendPushByEmail(email, payload) {
+  try {
+    const db = getDb();
+    const user = db.prepare('SELECT id FROM users WHERE email = ?').get(email);
+    if (user) await sendToUser(user.id, payload);
+  } catch (err) {
+    console.error('[Push] sendPushByEmail err:', err.message);
+  }
+}
+
+// Trimite push tuturor administratorilor activi
+async function sendPushToAdmins(payload) {
+  try {
+    const db = getDb();
+    const admins = db.prepare("SELECT id FROM users WHERE role = 'admin' AND active = 1").all();
+    for (const admin of admins) await sendToUser(admin.id, payload);
+  } catch (err) {
+    console.error('[Push] sendPushToAdmins err:', err.message);
+  }
+}
+
 module.exports = router;
 module.exports.sendToUser = sendToUser;
 module.exports.sendToAdmins = sendToAdmins;
+module.exports.sendPushByEmail = sendPushByEmail;
+module.exports.sendPushToAdmins = sendPushToAdmins;

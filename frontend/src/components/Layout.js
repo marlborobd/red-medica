@@ -48,14 +48,16 @@ export default function Layout() {
   }, []);
 
   const handleMarkCitita = async (id) => {
-    await markNotificareaCitita(id);
     setNotificari(prev => prev.filter(n => n.id !== id));
+    try { await markNotificareaCitita(id); } catch (_) {}
+    fetchNotificari();
   };
 
   const handleMarkToate = async () => {
-    await markToateNotificariCitite();
     setNotificari([]);
     setNotifDropdown(false);
+    try { await markToateNotificariCitite(); } catch (_) {}
+    fetchNotificari();
   };
 
   const formatTimp = (dateStr) => {
@@ -71,7 +73,7 @@ export default function Layout() {
     return date.toLocaleDateString('ro-RO', { day: '2-digit', month: '2-digit' }) + ` la ${ora}`;
   };
 
-  const NotifBell = () => (
+  const notifBellJsx = (
     <div ref={notifRef} style={{ position: 'relative' }}>
       <button
         onClick={() => setNotifDropdown(prev => !prev)}
@@ -215,7 +217,7 @@ export default function Layout() {
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center' }}>
-          <NotifBell />
+          {notifBellJsx}
           <button
             className="header-action-btn"
             onClick={() => { navigate('/pacienti'); closeSidebar(); }}
@@ -290,7 +292,7 @@ export default function Layout() {
         </nav>
 
         <div style={{ padding: '8px 12px', borderTop: '1px solid #f0f0f0' }}>
-          <NotifBell />
+          {notifBellJsx}
         </div>
 
         <div className="sidebar-footer">

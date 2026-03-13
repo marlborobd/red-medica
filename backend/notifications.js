@@ -1,7 +1,9 @@
 const { getDb } = require('./database');
+const { sendPushByEmail, sendPushToAdmins } = require('./routes/push');
 
-// Inserează o notificare în tabela notificari pentru un utilizator specific
+// Inserează notificare in-app ȘI trimite Web Push pentru un utilizator specific
 async function sendNotification(userEmail, titlu, mesaj) {
+  // In-app (clopoțel)
   try {
     const db = getDb();
     db.prepare(
@@ -9,11 +11,14 @@ async function sendNotification(userEmail, titlu, mesaj) {
     ).run(userEmail, titlu, mesaj);
     console.log(`[Notificari] → ${userEmail}: ${titlu}`);
   } catch (err) {
-    console.error('[Notificari] Eroare sendNotification:', err.message);
+    console.error('[Notificari] DB eroare:', err.message);
   }
+
+  // Web Push
+  sendPushByEmail(userEmail, { title: titlu, body: mesaj });
 }
 
-// Trimite notificare tuturor administratorilor activi
+// Notifică toți administratorii activi (in-app + push)
 async function sendToAdmins(titlu, mesaj) {
   try {
     const db = getDb();
