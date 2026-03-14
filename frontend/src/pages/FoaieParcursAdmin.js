@@ -77,16 +77,20 @@ async function addExcelHeader(ws, cols, numarInmatriculare, angajatNume, perioad
 
 export default function FoaieParcursAdmin() {
   const [angajati, setAngajati] = useState([]);
+  // Filtre tabel
   const [emailSelectat, setEmailSelectat] = useState('');
   const [dataDe, setDataDe] = useState('');
   const [dataPana, setDataPana] = useState('');
-  // Applied filter state (used for report header info)
   const [appliedEmail, setAppliedEmail] = useState('');
   const [appliedDe, setAppliedDe] = useState('');
   const [appliedPana, setAppliedPana] = useState('');
   const [foi, setFoi] = useState([]);
   const [totalKm, setTotalKm] = useState(0);
   const [loading, setLoading] = useState(false);
+  // Filtre raport (independente)
+  const [raportEmail, setRaportEmail] = useState('');
+  const [raportDe, setRaportDe] = useState('');
+  const [raportPana, setRaportPana] = useState('');
   const [raportLoading, setRaportLoading] = useState(false);
 
   useEffect(() => {
@@ -125,23 +129,32 @@ export default function FoaieParcursAdmin() {
     return a ? a.name : email;
   };
 
-  const titluRaport = numeAngajat(appliedEmail);
-  const numarePlate = getNumereInmatriculare(foi);
+  const fetchRaportData = async () => {
+    const params = {};
+    if (raportEmail) params.email = raportEmail;
+    if (raportDe) params.data_de = raportDe;
+    if (raportPana) params.data_pana = raportPana;
+    const { data } = await getFoiParcurs(params);
+    return { foiRaport: data.foi || [], totalKmRaport: data.total_km || 0 };
+  };
 
   const generatePDF = async () => {
     setRaportLoading(true);
     try {
-      if (!foi.length) { alert('Nu există date pentru export.'); return; }
+      const { foiRaport, totalKmRaport } = await fetchRaportData();
+      if (!foiRaport.length) { alert('Nu există date pentru export.'); return; }
+      const titluRaport = numeAngajat(raportEmail);
+      const numarePlate = getNumereInmatriculare(foiRaport);
       const { jsPDF } = await import('jspdf');
       const { default: autoTable } = await import('jspdf-autotable');
       const doc = new jsPDF({ orientation: 'landscape' });
 
-      const startY = addPdfHeader(doc, numarePlate, titluRaport, appliedDe, appliedPana);
+      const startY = addPdfHeader(doc, numarePlate, titluRaport, raportDe, raportPana);
 
       autoTable(doc, {
         startY,
         head: [['Data', 'Angajat', 'Nr. Înmatriculare', 'Ora Început', 'Ora Final', 'KM Început', 'KM Final', 'KM Total', 'Observații']],
-        body: foi.map(f => [
+        body: foiRaport.map(f => [
           formatData(f.data),
           f.angajat_nume || f.angajat_email || '',
           f.numar_inmatriculare || '',
@@ -152,7 +165,7 @@ export default function FoaieParcursAdmin() {
           f.km_total !== null ? f.km_total : '',
           f.observatii || ''
         ]),
-        foot: [['', '', '', '', '', '', 'TOTAL KM:', totalKm, '']],
+        foot: [['', '', '', '', '', '', 'TOTAL KM:', totalKmRaport, '']],
         headStyles: { fillColor: [192, 57, 43], textColor: 255, fontStyle: 'bold' },
         footStyles: { fillColor: [240, 240, 240], fontStyle: 'bold' },
         alternateRowStyles: { fillColor: [250, 219, 216] },
@@ -170,15 +183,17 @@ export default function FoaieParcursAdmin() {
   const generateExcel = async () => {
     setRaportLoading(true);
     try {
-      if (!foi.length) { alert('Nu există date pentru export.'); return; }
+      const { foiRaport, totalKmRaport } = await fetchRaportData();
+      if (!foiRaport.length) { alert('Nu există date pentru export.'); return; }
+      const titluRaport = numeAngajat(raportEmail);
+      const numarePlate = getNumereInmatriculare(foiRaport);
       const ExcelJS = (await import('exceljs')).default;
       const wb = new ExcelJS.Workbook();
       const ws = wb.addWorksheet('Foi Parcurs');
       const cols = 9;
 
-      await addExcelHeader(ws, cols, numarePlate, titluRaport, appliedDe, appliedPana);
+      await addExcelHeader(ws, cols, numarePlate, titluRaport, raportDe, raportPana);
 
-      // Header tabel (rândul 8 — după 6 rânduri header + 1 gol)
       const headerRow = ws.addRow(['Data', 'Angajat', 'Nr. Înmatriculare', 'Ora Început', 'Ora Final', 'KM Început', 'KM Final', 'KM Total', 'Observații']);
       headerRow.eachCell(cell => {
         cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFC0392B' } };
@@ -186,7 +201,7 @@ export default function FoaieParcursAdmin() {
         cell.alignment = { horizontal: 'center' };
       });
 
-      foi.forEach((f, i) => {
+      foiRaport.forEach((f, i) => {
         const row = ws.addRow([
           formatData(f.data),
           f.angajat_nume || f.angajat_email || '',
@@ -205,7 +220,7 @@ export default function FoaieParcursAdmin() {
         }
       });
 
-      const totalRow = ws.addRow(['', '', '', '', '', '', 'TOTAL KM:', totalKm, '']);
+      const totalRow = ws.addRow(['', '', '', '', '', '', 'TOTAL KM:', totalKmRaport, '']);
       totalRow.eachCell(cell => {
         cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFF9C4' } };
         cell.font = { bold: true };
@@ -269,15 +284,37 @@ export default function FoaieParcursAdmin() {
         </div>
       </div>
 
-      {/* Total + Butoane raport */}
+      {/* Total tabel */}
+      <div style={{ ...card, padding: '12px 24px' }}>
+        <span style={{ fontWeight: 700, fontSize: 15 }}>
+          Total KM afișați: <span style={{ color: '#C0392B', fontSize: 18 }}>{totalKm}</span>
+          {appliedEmail && <span style={{ fontWeight: 400, fontSize: 13, color: '#666', marginLeft: 8 }}>({numeAngajat(appliedEmail)})</span>}
+        </span>
+      </div>
+
+      {/* Generează Raport */}
       <div style={card}>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center' }}>
-          <span style={{ fontWeight: 700, fontSize: 15 }}>
-            Total KM: <span style={{ color: '#C0392B', fontSize: 18 }}>{totalKm}</span>
-            {appliedEmail && <span style={{ fontWeight: 400, fontSize: 13, color: '#666', marginLeft: 8 }}>({numeAngajat(appliedEmail)})</span>}
-          </span>
-          <button style={btnPrimary} onClick={generatePDF} disabled={raportLoading || !foi.length}>📄 Generează PDF</button>
-          <button style={{ ...btnPrimary, background: '#1a6e3f' }} onClick={generateExcel} disabled={raportLoading || !foi.length}>📊 Generează Excel</button>
+        <h2 style={{ fontSize: 16, fontWeight: 700, marginBottom: 14, color: '#333' }}>📄 Generează Raport</h2>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'flex-end' }}>
+          <div>
+            <label style={labelStyle}>Angajat</label>
+            <select style={{ ...inputStyle, minWidth: 220 }} value={raportEmail} onChange={e => setRaportEmail(e.target.value)}>
+              <option value="">Toți Angajații</option>
+              {angajati.map(a => (
+                <option key={a.email} value={a.email}>{a.name} ({a.email})</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label style={labelStyle}>Data de</label>
+            <input style={{ ...inputStyle, width: 150 }} type="date" value={raportDe} onChange={e => setRaportDe(e.target.value)} />
+          </div>
+          <div>
+            <label style={labelStyle}>Data până</label>
+            <input style={{ ...inputStyle, width: 150 }} type="date" value={raportPana} onChange={e => setRaportPana(e.target.value)} />
+          </div>
+          <button style={btnPrimary} onClick={generatePDF} disabled={raportLoading}>📄 Descarcă PDF</button>
+          <button style={{ ...btnPrimary, background: '#1a6e3f' }} onClick={generateExcel} disabled={raportLoading}>📊 Descarcă Excel</button>
           {raportLoading && <span style={{ color: '#888', fontSize: 13 }}>Se generează...</span>}
         </div>
       </div>
