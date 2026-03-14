@@ -195,6 +195,37 @@ function migrateNotificari() {
   }
 }
 
+// ===== Migrare: creare tabele foi_parcurs și setari_angajat =====
+function migrateFoiParcurs() {
+  try {
+    sqlJsDb.exec(`
+      CREATE TABLE IF NOT EXISTS foi_parcurs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        angajat_email TEXT NOT NULL,
+        numar_inmatriculare TEXT,
+        data TEXT,
+        ora_inceput TEXT,
+        ora_final TEXT,
+        km_inceput INTEGER,
+        km_final INTEGER,
+        km_total INTEGER,
+        observatii TEXT,
+        created_at TEXT DEFAULT (datetime('now', 'localtime'))
+      )
+    `);
+    sqlJsDb.exec(`
+      CREATE TABLE IF NOT EXISTS setari_angajat (
+        angajat_email TEXT PRIMARY KEY,
+        numar_inmatriculare TEXT
+      )
+    `);
+    saveDb();
+    console.log('✓ Migration: tabele foi_parcurs și setari_angajat create');
+  } catch (err) {
+    console.error('[Migration foi_parcurs]', err.message);
+  }
+}
+
 async function initDatabase() {
   const dbDir = path.dirname(DB_PATH);
   if (!fs.existsSync(dbDir)) {
@@ -300,6 +331,25 @@ async function initDatabase() {
       FOREIGN KEY (patient_id) REFERENCES patients(id),
       FOREIGN KEY (angajat_id) REFERENCES users(id)
     );
+
+    CREATE TABLE IF NOT EXISTS foi_parcurs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      angajat_email TEXT NOT NULL,
+      numar_inmatriculare TEXT,
+      data TEXT,
+      ora_inceput TEXT,
+      ora_final TEXT,
+      km_inceput INTEGER,
+      km_final INTEGER,
+      km_total INTEGER,
+      observatii TEXT,
+      created_at TEXT DEFAULT (datetime('now', 'localtime'))
+    );
+
+    CREATE TABLE IF NOT EXISTS setari_angajat (
+      angajat_email TEXT PRIMARY KEY,
+      numar_inmatriculare TEXT
+    );
   `);
 
   // Migrări pentru baze de date existente
@@ -310,6 +360,7 @@ async function initDatabase() {
   migrateViziteProgramate();
   migratePushSubscriptions();
   migrateNotificari();
+  migrateFoiParcurs();
 
   // Admin
   const adminEmail = process.env.ADMIN_EMAIL || 'admin@asistenta.ro';

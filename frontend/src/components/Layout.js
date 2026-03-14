@@ -6,10 +6,12 @@ import { getNotificari, markNotificareaCitita, markToateNotificariCitite } from 
 const NAV_ITEMS = [
   { to: '/', icon: '📊', label: 'Dashboard', exact: true },
   { to: '/pacienti', icon: '👥', label: 'Pacienți' },
+  { to: '/foaie-parcurs', icon: '🚗', label: 'Foaie Parcurs' },
 ];
 const ADMIN_NAV_ITEMS = [
   { to: '/rapoarte', icon: '📈', label: 'Rapoarte' },
   { to: '/utilizatori', icon: '🔧', label: 'Utilizatori' },
+  { to: '/foi-parcurs-admin', icon: '🗂️', label: 'Foi Parcurs Angajați' },
 ];
 
 export default function Layout() {
@@ -206,6 +208,8 @@ export default function Layout() {
     if (path.startsWith('/pacienti/')) return 'Profil Pacient';
     if (path === '/rapoarte') return 'Rapoarte';
     if (path === '/utilizatori') return 'Utilizatori';
+    if (path === '/foaie-parcurs') return 'Foaie Parcurs';
+    if (path === '/foi-parcurs-admin') return 'Foi Parcurs Angajați';
     return 'Red Medica';
   };
 
@@ -371,6 +375,14 @@ export default function Layout() {
         >
           <span className="bottom-nav-icon">📋</span>
           <span>Vizite</span>
+        </button>
+
+        <button
+          className={`bottom-nav-item ${isBottomActive('/foaie-parcurs') ? 'active' : ''}`}
+          onClick={() => { navigate('/foaie-parcurs'); closeSidebar(); }}
+        >
+          <span className="bottom-nav-icon">🚗</span>
+          <span>Parcurs</span>
         </button>
 
         {isAdmin && (

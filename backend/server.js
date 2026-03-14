@@ -12,6 +12,8 @@ const reportRoutes = require('./routes/reports');
 const uploadRoutes = require('./routes/upload');
 const pushRoutes = require('./routes/push');
 const scheduledVisitsRoutes = require('./routes/scheduled-visits');
+const foiParcursRoutes = require('./routes/foiParcurs');
+const setariRoutes = require('./routes/setari');
 const { scheduleMorningNotifications } = require('./routes/scheduled-visits');
 const { scheduleBackup } = require('./routes/backup');
 const cron = require('node-cron');
@@ -53,6 +55,8 @@ app.use('/api/reports', reportRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/push', pushRoutes);
 app.use('/api/scheduled-visits', scheduledVisitsRoutes);
+app.use('/api/foi-parcurs', foiParcursRoutes);
+app.use('/api/setari', setariRoutes);
 
 // ===== Backup endpoints =====
 app.get('/api/backup/manual', async (req, res) => {

@@ -10,6 +10,8 @@ import PatientProfile from './pages/PatientProfile';
 import AddVisit from './pages/AddVisit';
 import Reports from './pages/Reports';
 import Users from './pages/Users';
+import FoaieParcurs from './pages/FoaieParcurs';
+import FoaieParcursAdmin from './pages/FoaieParcursAdmin';
 
 function PrivateRoute({ children }) {
   const { user, loading } = useAuth();
@@ -39,6 +41,8 @@ function AppRoutes() {
         <Route path="pacienti/:id/vizita/:visitId" element={<AddVisit />} />
         <Route path="rapoarte" element={<AdminRoute><Reports /></AdminRoute>} />
         <Route path="utilizatori" element={<AdminRoute><Users /></AdminRoute>} />
+        <Route path="foaie-parcurs" element={<FoaieParcurs />} />
+        <Route path="foi-parcurs-admin" element={<AdminRoute><FoaieParcursAdmin /></AdminRoute>} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

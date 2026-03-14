@@ -75,6 +75,19 @@ export const getReportMonthly = (year) => api.get('/reports/monthly', { params: 
 export const getReportEmployees = () => api.get('/reports/employees');
 export const getVisitsDetail = (params) => api.get('/reports/visits-detail', { params });
 
+// Foi de Parcurs
+export const getFoiParcurs = (params) => api.get('/foi-parcurs', { params });
+export const createFoaieParcurs = (data) => api.post('/foi-parcurs', data);
+export const updateFoaieParcurs = (id, data) => api.put(`/foi-parcurs/${id}`, data);
+export const deleteFoaieParcurs = (id) => api.delete(`/foi-parcurs/${id}`);
+export const getRaportFoiParcurs = (params) => api.get('/foi-parcurs/raport', { params });
+export const getFoiParcursAdmin = (params) => api.get('/foi-parcurs/admin', { params });
+export const getFoiParcursAngajat = (email, params) => api.get(`/foi-parcurs/admin/${encodeURIComponent(email)}`, { params });
+
+// Setări angajat
+export const getNumarInmatriculare = () => api.get('/setari/numar-inmatriculare');
+export const saveNumarInmatriculare = (numar_inmatriculare) => api.put('/setari/numar-inmatriculare', { numar_inmatriculare });
+
 export const triggerManualBackup = () => api.get('/backup/manual');
 export const triggerBackupManual = () => api.post('/backup/manual');
 export const getBackupStatus = () => api.get('/backup/status');
