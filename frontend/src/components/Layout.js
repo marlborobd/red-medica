@@ -118,9 +118,13 @@ export default function Layout() {
             {notificari.length > 0 && (
               <button
                 onClick={handleMarkToate}
+                onTouchEnd={(e) => { e.preventDefault(); handleMarkToate(); }}
                 style={{
                   background: 'none', border: 'none', cursor: 'pointer',
-                  color: '#E53935', fontSize: 12, fontWeight: 600, padding: '4px 8px'
+                  color: '#E53935', fontSize: 12, fontWeight: 600,
+                  touchAction: 'manipulation',
+                  WebkitTapHighlightColor: 'transparent',
+                  minHeight: '48px', padding: '12px 16px'
                 }}
               >
                 Marchează toate ca citite
@@ -138,19 +142,37 @@ export default function Layout() {
                 key={n.id}
                 style={{
                   padding: '12px 16px', borderBottom: '1px solid #f5f5f5',
-                  background: '#fff8f8', cursor: 'pointer'
+                  background: '#fff8f8', display: 'flex', alignItems: 'flex-start',
+                  gap: 8
                 }}
-                onClick={() => handleMarkCitita(n.id)}
               >
-                <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 4, color: '#222' }}>
-                  {n.titlu}
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 4, color: '#222' }}>
+                    {n.titlu}
+                  </div>
+                  <div style={{ fontSize: 13, color: '#555', marginBottom: 6, lineHeight: 1.4 }}>
+                    {n.mesaj}
+                  </div>
+                  <div style={{ fontSize: 11, color: '#999' }}>
+                    {formatTimp(n.created_at)}
+                  </div>
                 </div>
-                <div style={{ fontSize: 13, color: '#555', marginBottom: 6, lineHeight: 1.4 }}>
-                  {n.mesaj}
-                </div>
-                <div style={{ fontSize: 11, color: '#999' }}>
-                  {formatTimp(n.created_at)}
-                </div>
+                <button
+                  onClick={(e) => { e.stopPropagation(); handleMarkCitita(n.id); }}
+                  onTouchEnd={(e) => { e.preventDefault(); e.stopPropagation(); handleMarkCitita(n.id); }}
+                  aria-label="Marchează ca citită"
+                  style={{
+                    background: 'none', border: 'none', cursor: 'pointer',
+                    color: '#aaa', fontSize: 18, lineHeight: 1,
+                    touchAction: 'manipulation',
+                    WebkitTapHighlightColor: 'transparent',
+                    minWidth: 44, minHeight: 44,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    flexShrink: 0, borderRadius: 8, padding: 8
+                  }}
+                >
+                  ✕
+                </button>
               </div>
             ))
           )}
