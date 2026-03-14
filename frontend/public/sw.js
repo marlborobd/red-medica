@@ -1,22 +1,16 @@
-/* Red Medica - Service Worker v1.0 */
-const CACHE_NAME = 'red-medica-v1';
-const STATIC_ASSETS = [
-  '/',
-  '/index.html',
-  '/logo.png',
-  '/manifest.json'
-];
+/* Red Medica - Service Worker */
+const CACHE_NAME = 'red-medica-1773518889030';
 
 /* Install: pre-cache static assets */
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME)
-      .then((cache) => cache.addAll(STATIC_ASSETS))
-      .then(() => self.skipWaiting())
+      .then((cache) => cache.addAll(['/', '/index.html', '/logo.png', '/manifest.json']))
+    // Nu apelăm skipWaiting() — noul SW va astepta confirmarea utilizatorului
   );
 });
 
-/* Activate: clean old caches */
+/* Activate: șterge cache-urile vechi și preia controlul */
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((cacheNames) =>
@@ -29,55 +23,51 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-/* Fetch strategy */
+/* Mesaj de la pagina principală: skip waiting când utilizatorul confirmă update-ul */
+self.addEventListener('message', (event) => {
+  if (event.data?.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
+});
+
+/* Fetch strategy: network-first pentru toate resursele */
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   if (request.method !== 'GET') return;
 
   const url = new URL(request.url);
 
-  /* API calls: network-first, cache fallback */
-  if (url.pathname.startsWith('/api/')) {
-    event.respondWith(
-      fetch(request)
-        .then((response) => {
-          if (response && response.ok) {
-            const clone = response.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
-          }
-          return response;
-        })
-        .catch(() => caches.match(request))
-    );
-    return;
-  }
-
-  /* Navigation: network with index.html fallback (React Router) */
+  /* Navigare (React Router): network cu fallback la index.html */
   if (request.mode === 'navigate') {
     event.respondWith(
-      fetch(request).catch(() =>
-        caches.match('/index.html')
-      )
+      fetch(request).catch(() => caches.match('/index.html'))
     );
     return;
   }
 
-  /* Static assets: cache-first, network fallback + cache update */
+  /* API calls: network-first, fără cache */
+  if (url.pathname.startsWith('/api/')) {
+    event.respondWith(
+      fetch(request).catch(() => caches.match(request))
+    );
+    return;
+  }
+
+  /* Toate celelalte resurse: network-first, cache ca fallback */
   event.respondWith(
-    caches.match(request).then((cached) => {
-      const networkFetch = fetch(request).then((response) => {
+    fetch(request)
+      .then((response) => {
         if (response && response.ok) {
           const clone = response.clone();
           caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
         }
         return response;
-      });
-      return cached || networkFetch;
-    })
+      })
+      .catch(() => caches.match(request))
   );
 });
 
-/* Background sync pentru date offline */
+/* Background sync */
 self.addEventListener('sync', (event) => {
   if (event.tag === 'sync-data') {
     console.log('[SW] Background sync triggered');
