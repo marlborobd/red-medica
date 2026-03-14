@@ -49,7 +49,7 @@ export default function FoaieParcurs() {
   const loadFoi = useCallback(async () => {
     try {
       const { data } = await getFoiParcurs();
-      setFoi(data);
+      setFoi(data.foi || data);
     } catch (_) {}
   }, []);
 
@@ -297,21 +297,6 @@ export default function FoaieParcurs() {
 
   return (
     <div style={{ maxWidth: 900, margin: '0 auto', padding: '16px 12px' }}>
-      <style>{`
-        .fp-form-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-          gap: 12px;
-        }
-        @media (max-width: 767px) {
-          .fp-form-grid {
-            grid-template-columns: 1fr;
-          }
-          .fp-form-grid .fp-span2 {
-            grid-column: span 1;
-          }
-        }
-      `}</style>
       <h1 style={{ fontSize: 22, fontWeight: 800, color: '#C0392B', marginBottom: 20 }}>
         🚗 Foaie de Parcurs
       </h1>
@@ -324,7 +309,7 @@ export default function FoaieParcurs() {
         {err && <div style={{ background: '#fee', color: '#C0392B', padding: '10px 14px', borderRadius: 8, marginBottom: 12 }}>{err}</div>}
         {success && <div style={{ background: '#e8f5e9', color: '#2e7d32', padding: '10px 14px', borderRadius: 8, marginBottom: 12 }}>{success}</div>}
         <form onSubmit={handleSubmit}>
-          <div className="fp-form-grid">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             <div>
               <label style={labelStyle}>Număr Înmatriculare</label>
               <input style={inputStyle} name="numar_inmatriculare" value={form.numar_inmatriculare} onChange={handleChange} placeholder="ex: B 123 ABC" />
@@ -338,12 +323,12 @@ export default function FoaieParcurs() {
               <input style={inputStyle} type="time" name="ora_inceput" value={form.ora_inceput} onChange={handleChange} />
             </div>
             <div>
-              <label style={labelStyle}>Ora Final</label>
-              <input style={inputStyle} type="time" name="ora_final" value={form.ora_final} onChange={handleChange} />
-            </div>
-            <div>
               <label style={labelStyle}>KM Început</label>
               <input style={inputStyle} type="number" name="km_inceput" value={form.km_inceput} onChange={handleChange} placeholder="0" min="0" />
+            </div>
+            <div>
+              <label style={labelStyle}>Ora Sfârșit</label>
+              <input style={inputStyle} type="time" name="ora_final" value={form.ora_final} onChange={handleChange} />
             </div>
             <div>
               <label style={labelStyle}>KM Final</label>
@@ -353,13 +338,13 @@ export default function FoaieParcurs() {
               <label style={labelStyle}>KM Total</label>
               <input style={{ ...inputStyle, background: '#f5f5f5', color: '#555' }} value={kmTotal !== '' ? kmTotal : ''} readOnly placeholder="calculat automat" />
             </div>
-            <div className="fp-span2" style={{ gridColumn: 'span 2' }}>
+            <div>
               <label style={labelStyle}>Observații (opțional)</label>
               <input style={inputStyle} name="observatii" value={form.observatii} onChange={handleChange} placeholder="Observații..." />
             </div>
           </div>
           <div style={{ display: 'flex', gap: 10, marginTop: 16 }}>
-            <button type="submit" style={btnPrimary} disabled={loading}>
+            <button type="submit" style={{ ...btnPrimary, flex: 1 }} disabled={loading}>
               {loading ? 'Se salvează...' : (editId ? '💾 Actualizează' : '💾 Salvează')}
             </button>
             {editId && (

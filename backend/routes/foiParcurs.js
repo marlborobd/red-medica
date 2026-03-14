@@ -58,18 +58,32 @@ router.get('/admin/:email', authenticate, requireAdmin, (req, res) => {
   }
 });
 
-// GET /api/foi-parcurs - foile angajatului logat
+// GET /api/foi-parcurs - admin: toate foile; angajat: doar foile proprii
 router.get('/', authenticate, (req, res) => {
   try {
     const db = getDb();
-    const { data_de, data_pana } = req.query;
-    let sql = 'SELECT * FROM foi_parcurs WHERE angajat_email = ?';
-    const params = [req.user.email];
-    if (data_de) { sql += ' AND data >= ?'; params.push(data_de); }
-    if (data_pana) { sql += ' AND data <= ?'; params.push(data_pana); }
-    sql += ' ORDER BY data DESC, ora_inceput DESC';
+    const { data_de, data_pana, email } = req.query;
+    const isAdmin = req.user.role === 'admin';
+    let sql, params;
+
+    if (isAdmin) {
+      sql = 'SELECT fp.*, u.name as angajat_nume FROM foi_parcurs fp LEFT JOIN users u ON fp.angajat_email = u.email WHERE 1=1';
+      params = [];
+      if (email) { sql += ' AND fp.angajat_email = ?'; params.push(email); }
+      if (data_de) { sql += ' AND fp.data >= ?'; params.push(data_de); }
+      if (data_pana) { sql += ' AND fp.data <= ?'; params.push(data_pana); }
+      sql += ' ORDER BY fp.data DESC, fp.ora_inceput DESC';
+    } else {
+      sql = 'SELECT * FROM foi_parcurs WHERE angajat_email = ?';
+      params = [req.user.email];
+      if (data_de) { sql += ' AND data >= ?'; params.push(data_de); }
+      if (data_pana) { sql += ' AND data <= ?'; params.push(data_pana); }
+      sql += ' ORDER BY data DESC, ora_inceput DESC';
+    }
+
     const foi = db.prepare(sql).all(...params);
-    res.json(foi);
+    const total_km = foi.reduce((s, f) => s + (f.km_total || 0), 0);
+    res.json({ foi, total_km });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

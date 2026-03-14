@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { getEmployees, getFoiParcursAdmin } from '../services/api';
+import { getEmployees, getFoiParcurs } from '../services/api';
 
 function formatData(str) {
   if (!str) return '';
@@ -97,7 +97,7 @@ export default function FoaieParcursAdmin() {
   const loadFoi = async (params) => {
     setLoading(true);
     try {
-      const { data } = await getFoiParcursAdmin(params);
+      const { data } = await getFoiParcurs(params);
       setFoi(data.foi || []);
       setTotalKm(data.total_km || 0);
     } catch (_) {
