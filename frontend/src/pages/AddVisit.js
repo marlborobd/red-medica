@@ -4,16 +4,15 @@ import { getPatient, createVisit, getVisit, updateVisit, uploadPhoto } from '../
 import { useAuth } from '../context/AuthContext';
 
 const SERVICII_OPTIONS = [
-  'Monitorizare semne vitale',
-  'Administrare medicamente',
-  'Pansamente și îngrijiri plăgi',
-  'Kinetoterapie',
-  'Asistență igienă personală',
-  'Recoltare analize',
+  'Monitorizare',
+  'Antibiotice',
+  'Recoltare Analize',
+  'Pansamente și Îngrijiri Plăgi',
+  'Sondaje',
+  'Perfuzie',
   'Injecții',
-  'Consultație medicală',
-  'Îngrijire post-operatorie',
-  'Terapie respiratorie'
+  'Consultație Medicală',
+  'Diverse (altele)'
 ];
 
 const STARI_PACIENT = [
