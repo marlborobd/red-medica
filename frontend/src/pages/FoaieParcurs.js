@@ -128,27 +128,38 @@ export default function FoaieParcurs() {
     setForm({ ...emptyForm, numar_inmatriculare: form.numar_inmatriculare });
   };
 
-  const generatePDF = async (foi, totalKm, angajatNume, perioadaDe, perioadaPana) => {
+  const generatePDF = async (foiData, totalKm, angajatNume, perioadaDe, perioadaPana) => {
     const { jsPDF } = await import('jspdf');
     const { default: autoTable } = await import('jspdf-autotable');
     const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const cx = pageWidth / 2;
+    const dataGen = new Date().toLocaleDateString('ro-RO');
+    const numarePlate = [...new Set(foiData.map(f => f.numar_inmatriculare).filter(Boolean))].join(', ') || '—';
 
+    doc.setFont('helvetica', 'bold');
     doc.setFontSize(16);
-    doc.setTextColor('#C0392B');
-    doc.text('Red Medica - Asistență Medicală la Domiciliu', 14, 18);
-    doc.setFontSize(12);
-    doc.setTextColor('#000000');
-    doc.text('Foaie de Parcurs', 14, 28);
-    doc.text(`Angajat: ${angajatNume}`, 14, 36);
-    if (perioadaDe || perioadaPana) {
-      doc.text(`Perioadă: ${perioadaDe || '—'} → ${perioadaPana || '—'}`, 14, 44);
-    }
+    doc.setTextColor(0, 0, 0);
+    doc.text('UNITATEA RED MEDICA HOME SRL', cx, 16, { align: 'center' });
+    doc.setFontSize(13);
+    doc.text('FOAIE DE PARCURS', cx, 24, { align: 'center' });
+    doc.setLineWidth(0.5);
+    doc.setDrawColor(192, 57, 43);
+    doc.line(14, 28, pageWidth - 14, 28);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(10);
+    doc.setTextColor(0, 0, 0);
+    doc.text(`Data generare raport: ${dataGen}`, 14, 35);
+    doc.text(`Număr înmatriculare: ${numarePlate}`, 14, 41);
+    doc.text(`Angajat: ${angajatNume}`, 14, 47);
+    doc.text(`Perioada: ${perioadaDe || '—'} - ${perioadaPana || '—'}`, 14, 53);
 
     autoTable(doc, {
-      startY: perioadaDe || perioadaPana ? 52 : 44,
-      head: [['Data', 'Nr. Înmatriculare', 'Ora Început', 'Ora Final', 'KM Început', 'KM Final', 'KM Total', 'Observații']],
-      body: foi.map(f => [
+      startY: 61,
+      head: [['Data', 'Angajat', 'Nr. Înmatriculare', 'Ora Început', 'Ora Final', 'KM Început', 'KM Final', 'KM Total', 'Observații']],
+      body: foiData.map(f => [
         formatData(f.data),
+        angajatNume,
         f.numar_inmatriculare || '',
         f.ora_inceput || '',
         f.ora_final || '',
@@ -157,48 +168,68 @@ export default function FoaieParcurs() {
         f.km_total !== null ? f.km_total : '',
         f.observatii || ''
       ]),
-      foot: [['', '', '', '', '', 'TOTAL KM:', totalKm, '']],
+      foot: [['', '', '', '', '', '', 'TOTAL KM:', totalKm, '']],
       headStyles: { fillColor: [192, 57, 43], textColor: 255, fontStyle: 'bold' },
-      footStyles: { fillColor: [240, 240, 240], fontStyle: 'bold' },
-      alternateRowStyles: { fillColor: [255, 240, 240] },
+      footStyles: { fillColor: [255, 249, 196], fontStyle: 'bold' },
+      alternateRowStyles: { fillColor: [250, 219, 216] },
       styles: { fontSize: 8 }
     });
 
-    const dataRaport = new Date().toLocaleDateString('ro-RO');
-    const finalY = doc.lastAutoTable.finalY + 8;
-    doc.setFontSize(9);
-    doc.setTextColor('#666666');
-    doc.text(`Generat la: ${dataRaport}`, 14, finalY);
-
-    const filename = `FoaieParcurs_${angajatNume.replace(/\s/g, '_')}_${perioadaDe || 'toate'}_${perioadaPana || ''}.pdf`;
+    const filename = `FoaieParcurs_${angajatNume.replace(/\s/g, '_')}_${perioadaDe || 'toate'}.pdf`;
     doc.save(filename);
   };
 
-  const generateExcel = async (foi, totalKm, angajatNume, perioadaDe, perioadaPana) => {
+  const generateExcel = async (foiData, totalKm, angajatNume, perioadaDe, perioadaPana) => {
     const ExcelJS = (await import('exceljs')).default;
     const wb = new ExcelJS.Workbook();
     const ws = wb.addWorksheet('Foaie Parcurs');
+    const cols = 9;
+    const dataGen = new Date().toLocaleDateString('ro-RO');
+    const numarePlate = [...new Set(foiData.map(f => f.numar_inmatriculare).filter(Boolean))].join(', ') || '—';
+    const lastCol = String.fromCharCode(64 + cols);
 
-    ws.mergeCells('A1:H1');
-    ws.getCell('A1').value = 'Red Medica - Asistență Medicală la Domiciliu';
-    ws.getCell('A1').font = { bold: true, size: 14, color: { argb: 'FFC0392B' } };
-    ws.getCell('A1').alignment = { horizontal: 'center' };
+    ws.mergeCells(`A1:${lastCol}1`);
+    ws.getCell('A1').value = 'UNITATEA RED MEDICA HOME SRL';
+    ws.getCell('A1').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFC0392B' } };
+    ws.getCell('A1').font = { bold: true, size: 14, color: { argb: 'FFFFFFFF' } };
+    ws.getCell('A1').alignment = { horizontal: 'center', vertical: 'middle' };
+    ws.getRow(1).height = 24;
 
-    ws.mergeCells('A2:H2');
-    ws.getCell('A2').value = `Angajat: ${angajatNume}${perioadaDe || perioadaPana ? `  |  Perioadă: ${perioadaDe || '—'} → ${perioadaPana || '—'}` : ''}`;
-    ws.getCell('A2').alignment = { horizontal: 'center' };
+    ws.mergeCells(`A2:${lastCol}2`);
+    ws.getCell('A2').value = 'FOAIE DE PARCURS';
+    ws.getCell('A2').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE74C3C' } };
+    ws.getCell('A2').font = { bold: true, size: 12, color: { argb: 'FFFFFFFF' } };
+    ws.getCell('A2').alignment = { horizontal: 'center', vertical: 'middle' };
+    ws.getRow(2).height = 20;
 
-    const headers = ['Data', 'Nr. Înmatriculare', 'Ora Început', 'Ora Final', 'KM Început', 'KM Final', 'KM Total', 'Observații'];
-    const headerRow = ws.addRow(headers);
+    const grayFill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF2F2F2' } };
+    [
+      `Data generare raport: ${dataGen}`,
+      `Număr înmatriculare: ${numarePlate}`,
+      `Angajat: ${angajatNume}`,
+      `Perioada: ${perioadaDe || '—'} - ${perioadaPana || '—'}`
+    ].forEach((text, i) => {
+      const rn = i + 3;
+      ws.mergeCells(`A${rn}:${lastCol}${rn}`);
+      ws.getCell(`A${rn}`).value = text;
+      ws.getCell(`A${rn}`).fill = grayFill;
+      ws.getCell(`A${rn}`).font = { size: 10 };
+      ws.getCell(`A${rn}`).alignment = { horizontal: 'left' };
+    });
+
+    ws.addRow([]); // row 7 - gol
+
+    const headerRow = ws.addRow(['Data', 'Angajat', 'Nr. Înmatriculare', 'Ora Început', 'Ora Final', 'KM Început', 'KM Final', 'KM Total', 'Observații']);
     headerRow.eachCell(cell => {
       cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFC0392B' } };
       cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
       cell.alignment = { horizontal: 'center' };
     });
 
-    foi.forEach((f, i) => {
+    foiData.forEach((f, i) => {
       const row = ws.addRow([
         formatData(f.data),
+        angajatNume,
         f.numar_inmatriculare || '',
         f.ora_inceput || '',
         f.ora_final || '',
@@ -209,21 +240,20 @@ export default function FoaieParcurs() {
       ]);
       if (i % 2 === 1) {
         row.eachCell(cell => {
-          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFDE8E8' } };
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFADBD8' } };
         });
       }
     });
 
-    const totalRow = ws.addRow(['', '', '', '', '', 'TOTAL KM:', totalKm, '']);
-    totalRow.getCell(6).font = { bold: true };
-    totalRow.getCell(7).font = { bold: true };
+    const totalRow = ws.addRow(['', '', '', '', '', '', 'TOTAL KM:', totalKm, '']);
     totalRow.eachCell(cell => {
-      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF0F0F0' } };
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFF9C4' } };
+      cell.font = { bold: true };
     });
 
     ws.columns = [
-      { width: 12 }, { width: 18 }, { width: 12 }, { width: 12 },
-      { width: 12 }, { width: 12 }, { width: 12 }, { width: 24 }
+      { width: 12 }, { width: 20 }, { width: 18 }, { width: 12 },
+      { width: 12 }, { width: 12 }, { width: 12 }, { width: 12 }, { width: 24 }
     ];
 
     const buffer = await wb.xlsx.writeBuffer();

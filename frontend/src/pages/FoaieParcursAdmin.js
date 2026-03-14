@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { getEmployees, getFoiParcursAdmin } from '../services/api';
 
 function formatData(str) {
@@ -6,11 +6,84 @@ function formatData(str) {
   return str.slice(0, 10).split('-').reverse().join('.');
 }
 
+function getNumereInmatriculare(foi) {
+  return [...new Set(foi.map(f => f.numar_inmatriculare).filter(Boolean))].join(', ') || '—';
+}
+
+function addPdfHeader(doc, numarInmatriculare, angajatNume, perioadaDe, perioadaPana) {
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const cx = pageWidth / 2;
+  const dataGen = new Date().toLocaleDateString('ro-RO');
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(16);
+  doc.setTextColor(0, 0, 0);
+  doc.text('UNITATEA RED MEDICA HOME SRL', cx, 16, { align: 'center' });
+
+  doc.setFontSize(13);
+  doc.text('FOAIE DE PARCURS', cx, 24, { align: 'center' });
+
+  doc.setLineWidth(0.5);
+  doc.setDrawColor(192, 57, 43);
+  doc.line(14, 28, pageWidth - 14, 28);
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(10);
+  doc.setTextColor(0, 0, 0);
+  doc.text(`Data generare raport: ${dataGen}`, 14, 35);
+  doc.text(`Număr înmatriculare: ${numarInmatriculare}`, 14, 41);
+  doc.text(`Angajat: ${angajatNume}`, 14, 47);
+  doc.text(`Perioada: ${perioadaDe || '—'} - ${perioadaPana || '—'}`, 14, 53);
+
+  return 61;
+}
+
+async function addExcelHeader(ws, cols, numarInmatriculare, angajatNume, perioadaDe, perioadaPana) {
+  const dataGen = new Date().toLocaleDateString('ro-RO');
+  const range = `A1:${String.fromCharCode(64 + cols)}1`;
+
+  ws.mergeCells(`A1:${String.fromCharCode(64 + cols)}1`);
+  ws.getCell('A1').value = 'UNITATEA RED MEDICA HOME SRL';
+  ws.getCell('A1').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFC0392B' } };
+  ws.getCell('A1').font = { bold: true, size: 14, color: { argb: 'FFFFFFFF' } };
+  ws.getCell('A1').alignment = { horizontal: 'center', vertical: 'middle' };
+  ws.getRow(1).height = 24;
+
+  ws.mergeCells(`A2:${String.fromCharCode(64 + cols)}2`);
+  ws.getCell('A2').value = 'FOAIE DE PARCURS';
+  ws.getCell('A2').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE74C3C' } };
+  ws.getCell('A2').font = { bold: true, size: 12, color: { argb: 'FFFFFFFF' } };
+  ws.getCell('A2').alignment = { horizontal: 'center', vertical: 'middle' };
+  ws.getRow(2).height = 20;
+
+  const grayFill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF2F2F2' } };
+  const details = [
+    `Data generare raport: ${dataGen}`,
+    `Număr înmatriculare: ${numarInmatriculare}`,
+    `Angajat: ${angajatNume}`,
+    `Perioada: ${perioadaDe || '—'} - ${perioadaPana || '—'}`
+  ];
+  details.forEach((text, i) => {
+    const rowNum = i + 3;
+    ws.mergeCells(`A${rowNum}:${String.fromCharCode(64 + cols)}${rowNum}`);
+    ws.getCell(`A${rowNum}`).value = text;
+    ws.getCell(`A${rowNum}`).fill = grayFill;
+    ws.getCell(`A${rowNum}`).font = { size: 10 };
+    ws.getCell(`A${rowNum}`).alignment = { horizontal: 'left' };
+  });
+
+  ws.addRow([]); // empty row before table (row 7)
+}
+
 export default function FoaieParcursAdmin() {
   const [angajati, setAngajati] = useState([]);
   const [emailSelectat, setEmailSelectat] = useState('');
   const [dataDe, setDataDe] = useState('');
   const [dataPana, setDataPana] = useState('');
+  // Applied filter state (used for report header info)
+  const [appliedEmail, setAppliedEmail] = useState('');
+  const [appliedDe, setAppliedDe] = useState('');
+  const [appliedPana, setAppliedPana] = useState('');
   const [foi, setFoi] = useState([]);
   const [totalKm, setTotalKm] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -18,15 +91,12 @@ export default function FoaieParcursAdmin() {
 
   useEffect(() => {
     getEmployees().then(({ data }) => setAngajati(data || [])).catch(() => {});
-  }, []);
+    loadFoi({});
+  }, []); // only on mount
 
-  const loadFoi = useCallback(async () => {
+  const loadFoi = async (params) => {
     setLoading(true);
     try {
-      const params = {};
-      if (emailSelectat) params.email = emailSelectat;
-      if (dataDe) params.data_de = dataDe;
-      if (dataPana) params.data_pana = dataPana;
       const { data } = await getFoiParcursAdmin(params);
       setFoi(data.foi || []);
       setTotalKm(data.total_km || 0);
@@ -36,20 +106,27 @@ export default function FoaieParcursAdmin() {
     } finally {
       setLoading(false);
     }
-  }, [emailSelectat, dataDe, dataPana]);
+  };
 
-  useEffect(() => {
-    loadFoi();
-  }, [loadFoi]);
+  const handleApplyFilters = () => {
+    const params = {};
+    if (emailSelectat) params.email = emailSelectat;
+    if (dataDe) params.data_de = dataDe;
+    if (dataPana) params.data_pana = dataPana;
+    setAppliedEmail(emailSelectat);
+    setAppliedDe(dataDe);
+    setAppliedPana(dataPana);
+    loadFoi(params);
+  };
 
   const numeAngajat = (email) => {
+    if (!email) return 'Toți Angajații';
     const a = angajati.find(a => a.email === email);
     return a ? a.name : email;
   };
 
-  const titluRaport = emailSelectat
-    ? numeAngajat(emailSelectat)
-    : 'Toți angajații';
+  const titluRaport = numeAngajat(appliedEmail);
+  const numarePlate = getNumereInmatriculare(foi);
 
   const generatePDF = async () => {
     setRaportLoading(true);
@@ -57,22 +134,13 @@ export default function FoaieParcursAdmin() {
       if (!foi.length) { alert('Nu există date pentru export.'); return; }
       const { jsPDF } = await import('jspdf');
       const { default: autoTable } = await import('jspdf-autotable');
-      const doc = new jsPDF();
+      const doc = new jsPDF({ orientation: 'landscape' });
 
-      doc.setFontSize(16);
-      doc.setTextColor('#C0392B');
-      doc.text('Red Medica - Asistență Medicală la Domiciliu', 14, 18);
-      doc.setFontSize(12);
-      doc.setTextColor('#000000');
-      doc.text('Raport Foi de Parcurs', 14, 28);
-      doc.text(`Angajat: ${titluRaport}`, 14, 36);
-      if (dataDe || dataPana) {
-        doc.text(`Perioadă: ${dataDe || '—'} → ${dataPana || '—'}`, 14, 44);
-      }
+      const startY = addPdfHeader(doc, numarePlate, titluRaport, appliedDe, appliedPana);
 
       autoTable(doc, {
-        startY: dataDe || dataPana ? 52 : 44,
-        head: [['Data', 'Angajat', 'Nr. Înmtr.', 'Ora Înc.', 'Ora Final', 'KM Înc.', 'KM Final', 'KM Total', 'Observații']],
+        startY,
+        head: [['Data', 'Angajat', 'Nr. Înmatriculare', 'Ora Început', 'Ora Final', 'KM Început', 'KM Final', 'KM Total', 'Observații']],
         body: foi.map(f => [
           formatData(f.data),
           f.angajat_nume || f.angajat_email || '',
@@ -87,14 +155,10 @@ export default function FoaieParcursAdmin() {
         foot: [['', '', '', '', '', '', 'TOTAL KM:', totalKm, '']],
         headStyles: { fillColor: [192, 57, 43], textColor: 255, fontStyle: 'bold' },
         footStyles: { fillColor: [240, 240, 240], fontStyle: 'bold' },
-        alternateRowStyles: { fillColor: [255, 240, 240] },
-        styles: { fontSize: 7 }
+        alternateRowStyles: { fillColor: [250, 219, 216] },
+        styles: { fontSize: 8 }
       });
 
-      const finalY = doc.lastAutoTable.finalY + 8;
-      doc.setFontSize(9);
-      doc.setTextColor('#666666');
-      doc.text(`Generat la: ${new Date().toLocaleDateString('ro-RO')}`, 14, finalY);
       doc.save(`RaportFoiParcurs_${titluRaport.replace(/\s/g, '_')}.pdf`);
     } catch (err) {
       alert('Eroare PDF: ' + err.message);
@@ -110,17 +174,12 @@ export default function FoaieParcursAdmin() {
       const ExcelJS = (await import('exceljs')).default;
       const wb = new ExcelJS.Workbook();
       const ws = wb.addWorksheet('Foi Parcurs');
+      const cols = 9;
 
-      ws.mergeCells('A1:I1');
-      ws.getCell('A1').value = 'Red Medica - Asistență Medicală la Domiciliu';
-      ws.getCell('A1').font = { bold: true, size: 14, color: { argb: 'FFC0392B' } };
-      ws.getCell('A1').alignment = { horizontal: 'center' };
+      await addExcelHeader(ws, cols, numarePlate, titluRaport, appliedDe, appliedPana);
 
-      ws.mergeCells('A2:I2');
-      ws.getCell('A2').value = `Angajat: ${titluRaport}${dataDe || dataPana ? `  |  Perioadă: ${dataDe || '—'} → ${dataPana || '—'}` : ''}`;
-      ws.getCell('A2').alignment = { horizontal: 'center' };
-
-      const headerRow = ws.addRow(['Data', 'Angajat', 'Nr. Înmtr.', 'Ora Înc.', 'Ora Final', 'KM Înc.', 'KM Final', 'KM Total', 'Observații']);
+      // Header tabel (rândul 8 — după 6 rânduri header + 1 gol)
+      const headerRow = ws.addRow(['Data', 'Angajat', 'Nr. Înmatriculare', 'Ora Început', 'Ora Final', 'KM Început', 'KM Final', 'KM Total', 'Observații']);
       headerRow.eachCell(cell => {
         cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFC0392B' } };
         cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
@@ -141,39 +200,20 @@ export default function FoaieParcursAdmin() {
         ]);
         if (i % 2 === 1) {
           row.eachCell(cell => {
-            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFDE8E8' } };
+            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFADBD8' } };
           });
         }
       });
 
-      // Totaluri per angajat
-      if (!emailSelectat) {
-        const byAngajat = {};
-        foi.forEach(f => {
-          const key = f.angajat_email;
-          if (!byAngajat[key]) byAngajat[key] = { nume: f.angajat_nume || f.angajat_email, km: 0 };
-          byAngajat[key].km += (f.km_total || 0);
-        });
-        ws.addRow([]);
-        const subtitluRow = ws.addRow(['Totaluri per angajat', '', '', '', '', '', '', '', '']);
-        subtitluRow.getCell(1).font = { bold: true };
-        Object.values(byAngajat).forEach(({ nume, km }) => {
-          const r = ws.addRow([nume, '', '', '', '', '', 'KM Total:', km, '']);
-          r.getCell(7).font = { bold: true };
-          r.getCell(8).font = { bold: true };
-        });
-      }
-
       const totalRow = ws.addRow(['', '', '', '', '', '', 'TOTAL KM:', totalKm, '']);
-      totalRow.getCell(7).font = { bold: true };
-      totalRow.getCell(8).font = { bold: true };
       totalRow.eachCell(cell => {
-        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF0F0F0' } };
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFF9C4' } };
+        cell.font = { bold: true };
       });
 
       ws.columns = [
-        { width: 12 }, { width: 20 }, { width: 16 }, { width: 11 }, { width: 11 },
-        { width: 11 }, { width: 11 }, { width: 11 }, { width: 22 }
+        { width: 12 }, { width: 20 }, { width: 18 }, { width: 12 }, { width: 12 },
+        { width: 12 }, { width: 12 }, { width: 12 }, { width: 24 }
       ];
 
       const buffer = await wb.xlsx.writeBuffer();
@@ -197,7 +237,7 @@ export default function FoaieParcursAdmin() {
   const btnPrimary = { background: '#C0392B', color: '#fff', border: 'none', borderRadius: 8, padding: '10px 20px', fontSize: 14, fontWeight: 700, cursor: 'pointer' };
 
   return (
-    <div style={{ maxWidth: 1000, margin: '0 auto', padding: '16px 12px' }}>
+    <div style={{ maxWidth: 1100, margin: '0 auto', padding: '16px 12px' }}>
       <h1 style={{ fontSize: 22, fontWeight: 800, color: '#C0392B', marginBottom: 20 }}>
         🚗 Foi Parcurs Angajați
       </h1>
@@ -209,7 +249,7 @@ export default function FoaieParcursAdmin() {
           <div>
             <label style={labelStyle}>Angajat</label>
             <select style={{ ...inputStyle, minWidth: 220 }} value={emailSelectat} onChange={e => setEmailSelectat(e.target.value)}>
-              <option value="">Toți angajații</option>
+              <option value="">Toți Angajații</option>
               {angajati.map(a => (
                 <option key={a.email} value={a.email}>{a.name} ({a.email})</option>
               ))}
@@ -223,18 +263,21 @@ export default function FoaieParcursAdmin() {
             <label style={labelStyle}>Data până</label>
             <input style={{ ...inputStyle, width: 150 }} type="date" value={dataPana} onChange={e => setDataPana(e.target.value)} />
           </div>
+          <button style={btnPrimary} onClick={handleApplyFilters} disabled={loading}>
+            🔍 Aplică Filtre
+          </button>
         </div>
       </div>
 
-      {/* Raport */}
+      {/* Total + Butoane raport */}
       <div style={card}>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center' }}>
           <span style={{ fontWeight: 700, fontSize: 15 }}>
             Total KM: <span style={{ color: '#C0392B', fontSize: 18 }}>{totalKm}</span>
-            {emailSelectat && <span style={{ fontWeight: 400, fontSize: 13, color: '#666', marginLeft: 8 }}>({numeAngajat(emailSelectat)})</span>}
+            {appliedEmail && <span style={{ fontWeight: 400, fontSize: 13, color: '#666', marginLeft: 8 }}>({numeAngajat(appliedEmail)})</span>}
           </span>
-          <button style={btnPrimary} onClick={generatePDF} disabled={raportLoading}>📄 PDF</button>
-          <button style={{ ...btnPrimary, background: '#1a6e3f' }} onClick={generateExcel} disabled={raportLoading}>📊 Excel</button>
+          <button style={btnPrimary} onClick={generatePDF} disabled={raportLoading || !foi.length}>📄 Generează PDF</button>
+          <button style={{ ...btnPrimary, background: '#1a6e3f' }} onClick={generateExcel} disabled={raportLoading || !foi.length}>📊 Generează Excel</button>
           {raportLoading && <span style={{ color: '#888', fontSize: 13 }}>Se generează...</span>}
         </div>
       </div>
@@ -247,7 +290,7 @@ export default function FoaieParcursAdmin() {
         {loading ? (
           <div style={{ textAlign: 'center', color: '#888', padding: '20px 0' }}>Se încarcă...</div>
         ) : foi.length === 0 ? (
-          <div style={{ color: '#999', textAlign: 'center', padding: '24px 0' }}>Nu există foi de parcurs pentru filtrele selectate.</div>
+          <div style={{ color: '#999', textAlign: 'center', padding: '24px 0' }}>Nu există foi de parcurs. Selectați filtrele și apăsați Aplică Filtre.</div>
         ) : (
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
@@ -260,7 +303,7 @@ export default function FoaieParcursAdmin() {
               </thead>
               <tbody>
                 {foi.map((f, i) => (
-                  <tr key={f.id} style={{ background: i % 2 === 1 ? '#fff0f0' : '#fff', borderBottom: '1px solid #f0f0f0' }}>
+                  <tr key={f.id} style={{ background: i % 2 === 1 ? '#FADBD8' : '#fff', borderBottom: '1px solid #f0f0f0' }}>
                     <td style={{ padding: '8px 10px', whiteSpace: 'nowrap' }}>{formatData(f.data)}</td>
                     <td style={{ padding: '8px 10px', whiteSpace: 'nowrap' }}>{f.angajat_nume || f.angajat_email}</td>
                     <td style={{ padding: '8px 10px' }}>{f.numar_inmatriculare || '—'}</td>
@@ -269,12 +312,12 @@ export default function FoaieParcursAdmin() {
                     <td style={{ padding: '8px 10px' }}>{f.km_inceput !== null ? f.km_inceput : '—'}</td>
                     <td style={{ padding: '8px 10px' }}>{f.km_final !== null ? f.km_final : '—'}</td>
                     <td style={{ padding: '8px 10px', fontWeight: 700, color: '#C0392B' }}>{f.km_total !== null ? f.km_total : '—'}</td>
-                    <td style={{ padding: '8px 10px', maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis' }}>{f.observatii || '—'}</td>
+                    <td style={{ padding: '8px 10px', maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis' }}>{f.observatii || '—'}</td>
                   </tr>
                 ))}
               </tbody>
               <tfoot>
-                <tr style={{ background: '#f5f5f5', fontWeight: 700 }}>
+                <tr style={{ background: '#FFF9C4', fontWeight: 700 }}>
                   <td colSpan={7} style={{ padding: '8px 10px', textAlign: 'right' }}>TOTAL KM:</td>
                   <td style={{ padding: '8px 10px', color: '#C0392B', fontSize: 15 }}>{totalKm}</td>
                   <td></td>
