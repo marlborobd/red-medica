@@ -164,6 +164,16 @@ export default function Dashboard() {
         </button>
       </div>
 
+      {!isAdmin && (
+        <div style={{
+          background: '#FFF9C4', border: '1px solid #F9A825', borderRadius: 8,
+          padding: 12, margin: '0 0 16px 0', width: '100%', boxSizing: 'border-box',
+          fontWeight: 700, color: '#000000', fontSize: 14, lineHeight: 1.5
+        }}>
+          ⚠️ Nu uita să îți completezi Foaia de Parcurs și să verifici Pacienții sau Vizitele programate!
+        </div>
+      )}
+
       <div className="page-body">
         {/* Statistics */}
         <div className="stats-grid">
