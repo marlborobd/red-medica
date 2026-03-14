@@ -1,5 +1,5 @@
 /* Red Medica - Service Worker */
-const CACHE_NAME = 'red-medica-1773524192963';
+const CACHE_NAME = 'red-medica-1773525713113';
 
 /* Install: pre-cache static assets */
 self.addEventListener('install', (event) => {

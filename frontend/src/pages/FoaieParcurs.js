@@ -169,10 +169,10 @@ export default function FoaieParcurs() {
         f.observatii || ''
       ]),
       foot: [['', '', '', '', '', '', 'TOTAL KM:', totalKm, '']],
-      headStyles: { fillColor: [192, 57, 43], textColor: 255, fontStyle: 'bold' },
-      footStyles: { fillColor: [255, 249, 196], fontStyle: 'bold' },
-      alternateRowStyles: { fillColor: [250, 219, 216] },
-      styles: { fontSize: 8 }
+      headStyles: { fillColor: [192, 57, 43], textColor: [255, 255, 255], fontStyle: 'bold' },
+      footStyles: { fillColor: [255, 255, 255], textColor: [0, 0, 0], fontStyle: 'bold', lineColor: [0, 0, 0], lineWidth: 0.3 },
+      alternateRowStyles: { fillColor: [255, 255, 255] },
+      styles: { fontSize: 8, textColor: [0, 0, 0], fontStyle: 'bold', fillColor: [255, 255, 255], lineColor: [0, 0, 0], lineWidth: 0.3 }
     });
 
     const filename = `FoaieParcurs_${angajatNume.replace(/\s/g, '_')}_${perioadaDe || 'toate'}.pdf`;
