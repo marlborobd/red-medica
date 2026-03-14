@@ -64,6 +64,7 @@ router.get('/', authenticate, (req, res) => {
     const db = getDb();
     const { data_de, data_pana, email } = req.query;
     const isAdmin = req.user.role === 'admin';
+    console.log(`[FoiParcurs] GET / | role=${req.user.role} | email_filtru=${email || '(toti)'} | data_de=${data_de || '-'} | data_pana=${data_pana || '-'}`);
     let sql, params;
 
     if (isAdmin) {
@@ -83,8 +84,10 @@ router.get('/', authenticate, (req, res) => {
 
     const foi = db.prepare(sql).all(...params);
     const total_km = foi.reduce((s, f) => s + (f.km_total || 0), 0);
+    console.log(`[FoiParcurs] Rezultat: ${foi.length} foi | total_km=${total_km}`);
     res.json({ foi, total_km });
   } catch (err) {
+    console.error('[FoiParcurs] Eroare:', err.message);
     res.status(500).json({ error: err.message });
   }
 });

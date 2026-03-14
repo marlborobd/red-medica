@@ -31,7 +31,7 @@ router.get('/me', authenticate, (req, res) => {
 router.get('/employees', authenticate, (req, res) => {
   const db = getDb();
   const employees = db.prepare(
-    "SELECT id, name, role FROM users WHERE active = 1 ORDER BY name"
+    "SELECT id, email, name, role FROM users WHERE active = 1 ORDER BY name"
   ).all();
   res.json(employees);
 });
