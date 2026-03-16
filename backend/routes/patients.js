@@ -106,13 +106,15 @@ router.post('/', authenticate, (req, res) => {
   const creatorName = req.user.name;
 
   // Creare programări automate dacă s-a selectat periodicitate
+  // Angajatul responsabil = cel către care a fost redirecționat pacientul, sau creatorul dacă nu e redirecționat
+  const responsabilId = redirectId || req.user.id;
   let nrProgramari = 0;
   if (periodicitate && data_vizitei) {
     if (periodicitate === '1_vizita') {
       db.prepare(`
         INSERT INTO vizite_programate (pacient_id, data_programata, ora_programata, angajat_responsabil)
         VALUES (?, ?, ?, ?)
-      `).run(patientId, data_vizitei, '08:00', req.user.id);
+      `).run(patientId, data_vizitei, '08:00', responsabilId);
       nrProgramari = 1;
     } else if (periodicitate === '2_vizite') {
       const ora1 = ora_prima_vizita || '08:00';
@@ -120,11 +122,11 @@ router.post('/', authenticate, (req, res) => {
       db.prepare(`
         INSERT INTO vizite_programate (pacient_id, data_programata, ora_programata, angajat_responsabil)
         VALUES (?, ?, ?, ?)
-      `).run(patientId, data_vizitei, ora1, req.user.id);
+      `).run(patientId, data_vizitei, ora1, responsabilId);
       db.prepare(`
         INSERT INTO vizite_programate (pacient_id, data_programata, ora_programata, angajat_responsabil)
         VALUES (?, ?, ?, ?)
-      `).run(patientId, data_vizitei, ora2, req.user.id);
+      `).run(patientId, data_vizitei, ora2, responsabilId);
       nrProgramari = 2;
     }
   }
