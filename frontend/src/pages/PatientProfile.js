@@ -46,7 +46,9 @@ export default function PatientProfile() {
   const [lightboxUrl, setLightboxUrl] = useState(null);
   const [toast, setToast] = useState(null);
   const [scheduleModal, setScheduleModal] = useState(false);
+  const [scheduleType, setScheduleType] = useState('simpla');
   const [scheduleForm, setScheduleForm] = useState({ data_programata: '', ora_programata: '', angajat_responsabil: '' });
+  const [multipleForm, setMultipleForm] = useState({ data_inceput: '', data_sfarsit: '', ora_programata: '', angajat_responsabil: '' });
   const [employees, setEmployees] = useState([]);
   const [scheduleSaving, setScheduleSaving] = useState(false);
   const [scheduleError, setScheduleError] = useState('');
@@ -56,7 +58,9 @@ export default function PatientProfile() {
   const openScheduleModal = () => {
     const today = new Date().toISOString().split('T')[0];
     const time = new Date().toTimeString().substring(0, 5);
+    setScheduleType('simpla');
     setScheduleForm({ data_programata: today, ora_programata: time, angajat_responsabil: '' });
+    setMultipleForm({ data_inceput: today, data_sfarsit: today, ora_programata: time, angajat_responsabil: '' });
     setScheduleError('');
     setScheduleModal(true);
     if (employees.length === 0) {
@@ -64,25 +68,66 @@ export default function PatientProfile() {
     }
   };
 
+  const countZileMultiple = () => {
+    if (!multipleForm.data_inceput || !multipleForm.data_sfarsit) return 0;
+    const start = new Date(multipleForm.data_inceput);
+    const end = new Date(multipleForm.data_sfarsit);
+    if (isNaN(start) || isNaN(end) || end < start) return 0;
+    return Math.round((end - start) / 86400000) + 1;
+  };
+
+  const formatDateRoShort = (dateStr) => {
+    if (!dateStr) return '';
+    const [y, m, d] = dateStr.split('-');
+    return `${d}.${m}.${y}`;
+  };
+
   const handleScheduleSave = async () => {
-    if (!scheduleForm.data_programata || !scheduleForm.ora_programata) {
-      setScheduleError('Data si ora sunt obligatorii');
-      return;
-    }
     setScheduleSaving(true);
     setScheduleError('');
     try {
-      const payload = {
-        pacient_id: parseInt(id),
-        data_programata: scheduleForm.data_programata,
-        ora_programata: scheduleForm.ora_programata,
-      };
-      if (scheduleForm.angajat_responsabil) {
-        payload.angajat_responsabil = parseInt(scheduleForm.angajat_responsabil);
+      if (scheduleType === 'multipla') {
+        if (!multipleForm.data_inceput || !multipleForm.data_sfarsit || !multipleForm.ora_programata) {
+          setScheduleError('Data Inceput, Data Sfarsit si Ora sunt obligatorii');
+          setScheduleSaving(false);
+          return;
+        }
+        const nrZile = countZileMultiple();
+        if (nrZile <= 0) {
+          setScheduleError('Data Sfarsit trebuie sa fie dupa Data Inceput');
+          setScheduleSaving(false);
+          return;
+        }
+        const payload = {
+          pacient_id: parseInt(id),
+          data_inceput: multipleForm.data_inceput,
+          data_sfarsit: multipleForm.data_sfarsit,
+          ora_programata: multipleForm.ora_programata,
+        };
+        if (multipleForm.angajat_responsabil) {
+          payload.angajat_responsabil = parseInt(multipleForm.angajat_responsabil);
+        }
+        const { data } = await createScheduledVisit(payload);
+        setScheduleModal(false);
+        showToast(`${data.count} vizite programate intre ${formatDateRoShort(data.data_inceput)} si ${formatDateRoShort(data.data_sfarsit)}. Angajatul a primit notificare.`);
+      } else {
+        if (!scheduleForm.data_programata || !scheduleForm.ora_programata) {
+          setScheduleError('Data si ora sunt obligatorii');
+          setScheduleSaving(false);
+          return;
+        }
+        const payload = {
+          pacient_id: parseInt(id),
+          data_programata: scheduleForm.data_programata,
+          ora_programata: scheduleForm.ora_programata,
+        };
+        if (scheduleForm.angajat_responsabil) {
+          payload.angajat_responsabil = parseInt(scheduleForm.angajat_responsabil);
+        }
+        await createScheduledVisit(payload);
+        setScheduleModal(false);
+        showToast('Vizita a fost programata cu succes. Angajatul a primit notificare.');
       }
-      await createScheduledVisit(payload);
-      setScheduleModal(false);
-      showToast('Vizita a fost programata cu succes. Angajatul a primit notificare.');
     } catch (err) {
       setScheduleError(err.response?.data?.error || 'Eroare la programare');
     } finally {
@@ -456,43 +501,128 @@ export default function PatientProfile() {
             <div className="modal-body">
               {scheduleError && <div className="alert alert-danger mb-2">⚠️ {scheduleError}</div>}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                <div className="form-group">
-                  <label className="form-label">Data Vizitei <span className="required">*</span></label>
-                  <input
-                    type="date"
-                    className="form-control"
-                    value={scheduleForm.data_programata}
-                    onChange={e => setScheduleForm(p => ({ ...p, data_programata: e.target.value }))}
-                  />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Ora Vizitei <span className="required">*</span></label>
-                  <input
-                    type="time"
-                    className="form-control"
-                    value={scheduleForm.ora_programata}
-                    onChange={e => setScheduleForm(p => ({ ...p, ora_programata: e.target.value }))}
-                  />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Angajat Responsabil</label>
-                  <select
-                    className="form-control"
-                    value={scheduleForm.angajat_responsabil}
-                    onChange={e => setScheduleForm(p => ({ ...p, angajat_responsabil: e.target.value }))}
+                {/* Toggle Vizita Simpla / Multipla */}
+                <div style={{ display: 'flex', gap: 8, background: '#f5f5f5', borderRadius: 8, padding: 4 }}>
+                  <button
+                    type="button"
+                    onClick={() => { setScheduleType('simpla'); setScheduleError(''); }}
+                    style={{
+                      flex: 1, padding: '8px 0', borderRadius: 6, border: 'none', cursor: 'pointer',
+                      fontWeight: 700, fontSize: 14,
+                      background: scheduleType === 'simpla' ? 'var(--primary)' : 'transparent',
+                      color: scheduleType === 'simpla' ? '#fff' : 'var(--text-secondary)',
+                      transition: 'all 0.2s'
+                    }}
                   >
-                    <option value="">— Eu (utilizatorul curent) —</option>
-                    {employees.map(emp => (
-                      <option key={emp.id} value={emp.id}>{emp.name}</option>
-                    ))}
-                  </select>
+                    Vizită Simplă
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setScheduleType('multipla'); setScheduleError(''); }}
+                    style={{
+                      flex: 1, padding: '8px 0', borderRadius: 6, border: 'none', cursor: 'pointer',
+                      fontWeight: 700, fontSize: 14,
+                      background: scheduleType === 'multipla' ? 'var(--primary)' : 'transparent',
+                      color: scheduleType === 'multipla' ? '#fff' : 'var(--text-secondary)',
+                      transition: 'all 0.2s'
+                    }}
+                  >
+                    Vizită Multiplă
+                  </button>
                 </div>
+
+                {scheduleType === 'simpla' ? (
+                  <>
+                    <div className="form-group">
+                      <label className="form-label">Data Vizitei <span className="required">*</span></label>
+                      <input
+                        type="date"
+                        className="form-control"
+                        value={scheduleForm.data_programata}
+                        onChange={e => setScheduleForm(p => ({ ...p, data_programata: e.target.value }))}
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">Ora Vizitei <span className="required">*</span></label>
+                      <input
+                        type="time"
+                        className="form-control"
+                        value={scheduleForm.ora_programata}
+                        onChange={e => setScheduleForm(p => ({ ...p, ora_programata: e.target.value }))}
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">Angajat Responsabil</label>
+                      <select
+                        className="form-control"
+                        value={scheduleForm.angajat_responsabil}
+                        onChange={e => setScheduleForm(p => ({ ...p, angajat_responsabil: e.target.value }))}
+                      >
+                        <option value="">— Eu (utilizatorul curent) —</option>
+                        {employees.map(emp => (
+                          <option key={emp.id} value={emp.id}>{emp.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="form-group">
+                      <label className="form-label">Data Început <span className="required">*</span></label>
+                      <input
+                        type="date"
+                        className="form-control"
+                        value={multipleForm.data_inceput}
+                        onChange={e => setMultipleForm(p => ({ ...p, data_inceput: e.target.value }))}
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">Data Sfârșit <span className="required">*</span></label>
+                      <input
+                        type="date"
+                        className="form-control"
+                        value={multipleForm.data_sfarsit}
+                        onChange={e => setMultipleForm(p => ({ ...p, data_sfarsit: e.target.value }))}
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">Ora Vizitei <span className="required">*</span></label>
+                      <input
+                        type="time"
+                        className="form-control"
+                        value={multipleForm.ora_programata}
+                        onChange={e => setMultipleForm(p => ({ ...p, ora_programata: e.target.value }))}
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">Angajat Responsabil</label>
+                      <select
+                        className="form-control"
+                        value={multipleForm.angajat_responsabil}
+                        onChange={e => setMultipleForm(p => ({ ...p, angajat_responsabil: e.target.value }))}
+                      >
+                        <option value="">— Eu (utilizatorul curent) —</option>
+                        {employees.map(emp => (
+                          <option key={emp.id} value={emp.id}>{emp.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                    {countZileMultiple() > 0 && (
+                      <div style={{
+                        background: '#E3F2FD', border: '1px solid #90CAF9', borderRadius: 8,
+                        padding: '10px 14px', fontSize: 14, fontWeight: 700, color: '#1565C0'
+                      }}>
+                        📅 {countZileMultiple()} vizite programate între {formatDateRoShort(multipleForm.data_inceput)} și {formatDateRoShort(multipleForm.data_sfarsit)}
+                      </div>
+                    )}
+                  </>
+                )}
               </div>
             </div>
             <div className="modal-footer">
               <button className="btn btn-ghost" onClick={() => setScheduleModal(false)}>Anulare</button>
               <button className="btn btn-primary" onClick={handleScheduleSave} disabled={scheduleSaving}>
-                {scheduleSaving ? 'Se salvează...' : '📅 Salvează Programarea'}
+                {scheduleSaving ? 'Se salvează...' : '📅 Programează'}
               </button>
             </div>
           </div>

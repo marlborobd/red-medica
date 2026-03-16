@@ -31,30 +31,66 @@ router.get('/', authenticate, (req, res) => {
   res.json(visits);
 });
 
-// POST / — creeaza vizita programata
+// POST / — creeaza vizita programata (simpla sau multipla)
 router.post('/', authenticate, (req, res) => {
-  const { pacient_id, data_programata, ora_programata, angajat_responsabil } = req.body;
-  if (!pacient_id || !data_programata || !ora_programata) {
-    return res.status(400).json({ error: 'pacient_id, data_programata si ora_programata sunt obligatorii' });
+  const { pacient_id, data_programata, data_inceput, data_sfarsit, ora_programata, angajat_responsabil } = req.body;
+
+  const isMultiple = data_inceput && data_sfarsit;
+
+  if (!pacient_id || !ora_programata || (!data_programata && !isMultiple)) {
+    return res.status(400).json({ error: 'pacient_id, ora_programata si data sunt obligatorii' });
   }
   const db = getDb();
   const patient = db.prepare('SELECT * FROM patients WHERE id = ?').get(pacient_id);
   if (!patient) return res.status(404).json({ error: 'Pacient negasit' });
 
   const responsabilId = angajat_responsabil ? parseInt(angajat_responsabil) : req.user.id;
-
-  const result = db.prepare(`
+  const insert = db.prepare(`
     INSERT INTO vizite_programate (pacient_id, data_programata, ora_programata, angajat_responsabil, status)
     VALUES (?, ?, ?, ?, 'PROGRAMAT')
-  `).run(pacient_id, data_programata, ora_programata, responsabilId);
+  `);
 
-  // Notifica angajatul responsabil
-  const responsabilUser = db.prepare('SELECT email FROM users WHERE id = ?').get(responsabilId);
-  if (responsabilUser) {
-    sendNotification(responsabilUser.email, 'Vizita programata', `Vizita pentru pacientul ${patient.nume} pe ${data_programata} la ${ora_programata}.`);
+  if (isMultiple) {
+    // Genereaza o inregistrare per zi din interval
+    const start = new Date(data_inceput);
+    const end = new Date(data_sfarsit);
+    if (isNaN(start) || isNaN(end) || end < start) {
+      return res.status(400).json({ error: 'Interval de date invalid' });
+    }
+    let count = 0;
+    let lastId;
+    const current = new Date(start);
+    while (current <= end) {
+      const dateStr = current.toISOString().split('T')[0];
+      const result = insert.run(pacient_id, dateStr, ora_programata, responsabilId);
+      lastId = result.lastInsertRowid;
+      count++;
+      current.setDate(current.getDate() + 1);
+    }
+
+    // O singura notificare pentru toate zilele
+    const responsabilUser = db.prepare('SELECT email FROM users WHERE id = ?').get(responsabilId);
+    if (responsabilUser) {
+      const formatRo = (d) => { const [y,m,z] = d.split('-'); return `${z}.${m}.${y}`; };
+      sendNotification(
+        responsabilUser.email,
+        'Vizite multiple programate',
+        `Vizite multiple programate pentru pacientul ${patient.nume}: ${count} zile intre ${formatRo(data_inceput)} si ${formatRo(data_sfarsit)}.`
+      );
+    }
+
+    return res.status(201).json({ count, data_inceput, data_sfarsit });
+  } else {
+    // Vizita simpla
+    const result = insert.run(pacient_id, data_programata, ora_programata, responsabilId);
+
+    const responsabilUser = db.prepare('SELECT email FROM users WHERE id = ?').get(responsabilId);
+    if (responsabilUser) {
+      sendNotification(responsabilUser.email, 'Vizita programata', `Vizita pentru pacientul ${patient.nume} pe ${data_programata} la ${ora_programata}.`);
+    }
+
+    return res.status(201).json({ id: result.lastInsertRowid });
   }
-
-  res.status(201).json({ id: result.lastInsertRowid });
 });
 
 // PUT /:id/efectuat — marcheaza ca efectuata + creeaza vizita reala
