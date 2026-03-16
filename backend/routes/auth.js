@@ -2,10 +2,20 @@ const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const rateLimit = require('express-rate-limit');
 const { getDb } = require('../database');
 const { authenticate, requireAdmin, JWT_SECRET } = require('../middleware/auth');
 
-router.post('/login', (req, res) => {
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  skipSuccessfulRequests: true,
+  message: { error: 'Prea multe încercări. Încearcă din nou după 15 minute.' },
+  standardHeaders: true,
+  legacyHeaders: false
+});
+
+router.post('/login', loginLimiter, (req, res) => {
   const { email, password } = req.body;
   if (!email || !password) {
     return res.status(400).json({ error: 'Email și parola sunt obligatorii' });

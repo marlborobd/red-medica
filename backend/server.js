@@ -18,6 +18,7 @@ const { scheduleMorningNotifications } = require('./routes/scheduled-visits');
 const { scheduleBackup } = require('./routes/backup');
 const cron = require('node-cron');
 const { runBackup, getLastBackup } = require('./backup');
+const { authenticate, requireAdmin } = require('./middleware/auth');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -58,8 +59,8 @@ app.use('/api/scheduled-visits', scheduledVisitsRoutes);
 app.use('/api/foi-parcurs', foiParcursRoutes);
 app.use('/api/setari', setariRoutes);
 
-// ===== Backup endpoints =====
-app.get('/api/backup/manual', async (req, res) => {
+// ===== Backup endpoints (doar admin autentificat) =====
+app.get('/api/backup/manual', authenticate, requireAdmin, async (req, res) => {
   try {
     await runBackup();
     res.json({ success: true, message: 'Backup reușit' });
@@ -68,7 +69,7 @@ app.get('/api/backup/manual', async (req, res) => {
   }
 });
 
-app.post('/api/backup/manual', async (req, res) => {
+app.post('/api/backup/manual', authenticate, requireAdmin, async (req, res) => {
   try {
     await runBackup();
     res.json({ success: true, message: 'Backup reușit' });
@@ -77,12 +78,12 @@ app.post('/api/backup/manual', async (req, res) => {
   }
 });
 
-app.get('/api/backup/status', (req, res) => {
+app.get('/api/backup/status', authenticate, requireAdmin, (req, res) => {
   const { lastBackupAt, lastBackupFile } = getLastBackup();
   res.json({ lastBackupAt, lastBackupFile });
 });
 
-app.get('/api/backup/download', (req, res) => {
+app.get('/api/backup/download', authenticate, requireAdmin, (req, res) => {
   const { BACKUP_FILE } = require('./backup');
   const fsSync = require('fs');
   if (!fsSync.existsSync(BACKUP_FILE)) {

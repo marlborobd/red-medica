@@ -51,10 +51,8 @@ function initVapid() {
     } catch (err) {
       console.error('[PUSH] Nu s-au putut salva VAPID keys:', err.message);
     }
-    console.log('\n=== VAPID KEYS GENERATE ===');
-    console.log('VAPID_PUBLIC_KEY=' + vapidKeys.publicKey);
-    console.log('VAPID_PRIVATE_KEY=' + vapidKeys.privateKey);
-    console.log('=== ADAUGA IN RAILWAY VARIABLES ===\n');
+    console.log('[PUSH] VAPID keys generate și salvate în', VAPID_FILE);
+    console.log('[PUSH] Adaugă VAPID_PUBLIC_KEY și VAPID_PRIVATE_KEY din fișier în Railway Variables.');
   }
 
   webpush.setVapidDetails(
@@ -63,11 +61,7 @@ function initVapid() {
     vapidKeys.privateKey
   );
 
-  console.log('\n=== VAPID KEYS DIN FISIER ===');
-  console.log('VAPID_PUBLIC_KEY=' + vapidKeys.publicKey);
-  console.log('VAPID_PRIVATE_KEY=' + vapidKeys.privateKey);
-  console.log('REACT_APP_VAPID_PUBLIC_KEY=' + vapidKeys.publicKey);
-  console.log('=== COPIAZA IN RAILWAY VARIABLES ===\n');
+  console.log('[PUSH] VAPID keys loaded successfully.');
 }
 
 initVapid();

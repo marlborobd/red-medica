@@ -1,6 +1,10 @@
 const jwt = require('jsonwebtoken');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'asistenta_medicala_secret_2024';
+if (!process.env.JWT_SECRET) {
+  console.error('[FATAL] process.env.JWT_SECRET must be set');
+  process.exit(1);
+}
+const JWT_SECRET = process.env.JWT_SECRET;
 
 function authenticate(req, res, next) {
   const authHeader = req.headers.authorization;

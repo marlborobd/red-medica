@@ -364,8 +364,14 @@ async function initDatabase() {
 
   // Admin
   const adminEmail = process.env.ADMIN_EMAIL || 'admin@asistenta.ro';
-  const adminPassword = process.env.ADMIN_PASSWORD || 'Admin123!';
+  const adminPassword = process.env.ADMIN_PASSWORD;
   const adminName = process.env.ADMIN_NAME || 'Administrator';
+  if (!adminPassword) {
+    console.warn('[WARN] ADMIN_PASSWORD nu este setat. Contul admin nu va fi creat/actualizat.');
+    saveDb();
+    console.log('✓ Baza de date inițializată cu succes');
+    return;
+  }
 
   const hashedPassword = bcrypt.hashSync(adminPassword, 10);
   db.prepare('INSERT OR IGNORE INTO users (email, password, name, role) VALUES (?, ?, ?, ?)')
