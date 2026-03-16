@@ -79,6 +79,31 @@ export default function Reports() {
     }
   };
 
+  const handleDownloadBackup = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('/api/backup/download', {
+        headers: { 'Authorization': 'Bearer ' + token }
+      });
+      if (!response.ok) {
+        const err = await response.json();
+        setBackupSectionMsg({ ok: false, text: err.error || 'Eroare la descărcare' });
+        setTimeout(() => setBackupSectionMsg(null), 6000);
+        return;
+      }
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'RedMedica_Backup.xlsx';
+      a.click();
+      window.URL.revokeObjectURL(url);
+    } catch {
+      setBackupSectionMsg({ ok: false, text: 'Eroare la descărcare' });
+      setTimeout(() => setBackupSectionMsg(null), 6000);
+    }
+  };
+
   const handleBackupSection = async () => {
     setBackupSectionLoading(true);
     setBackupSectionMsg(null);
@@ -370,14 +395,12 @@ export default function Reports() {
               >
                 {backupSectionLoading ? 'Se salvează...' : '💾 Backup Manual'}
               </button>
-              <a
-                href="/api/backup/download"
-                download="RedMedica_Backup.xlsx"
+              <button
                 className="btn btn-primary"
-                style={{ textDecoration: 'none' }}
+                onClick={handleDownloadBackup}
               >
                 ⬇️ Descarcă Backup Excel
-              </a>
+              </button>
               <span className="backup-status-text" style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
                 Data ultimului backup:{' '}
                 <strong style={{ color: 'var(--text)' }}>
