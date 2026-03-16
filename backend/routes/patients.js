@@ -64,7 +64,11 @@ router.get('/:id', authenticate, (req, res) => {
 });
 
 router.post('/', authenticate, (req, res) => {
-  const { nume, data_nasterii, varsta, adresa, telefon, acord_gdpr, redirectionat_catre_id } = req.body;
+  const {
+    nume, data_nasterii, varsta, adresa, telefon, acord_gdpr, redirectionat_catre_id,
+    tip_pacient, perioada_cass_inceput, perioada_cass_sfarsit, zile_cass,
+    periodicitate, data_vizitei, ora_prima_vizita, ora_a_doua_vizita
+  } = req.body;
   if (!nume || !nume.trim()) {
     return res.status(400).json({ error: 'Numele pacientului este obligatoriu' });
   }
@@ -72,10 +76,15 @@ router.post('/', authenticate, (req, res) => {
 
   const redirectId = redirectionat_catre_id ? parseInt(redirectionat_catre_id) : null;
   const status = redirectId ? 'PENDING' : 'ACTIV';
+  const tipPacientVal = tip_pacient === 'CASS' ? 'CASS' : 'PRIVAT';
 
   const result = db.prepare(`
-    INSERT INTO patients (nume, data_nasterii, varsta, adresa, telefon, acord_gdpr, utilizator_creator_id, status_preluare, redirectionat_catre_id)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO patients (
+      nume, data_nasterii, varsta, adresa, telefon, acord_gdpr,
+      utilizator_creator_id, status_preluare, redirectionat_catre_id,
+      tip_pacient, perioada_cass_inceput, perioada_cass_sfarsit, zile_cass
+    )
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     nume.trim(),
     data_nasterii || null,
@@ -85,12 +94,40 @@ router.post('/', authenticate, (req, res) => {
     acord_gdpr ? 1 : 0,
     req.user.id,
     status,
-    redirectId
+    redirectId,
+    tipPacientVal,
+    tipPacientVal === 'CASS' ? (perioada_cass_inceput || null) : null,
+    tipPacientVal === 'CASS' ? (perioada_cass_sfarsit || null) : null,
+    tipPacientVal === 'CASS' ? (zile_cass ? parseInt(zile_cass) : null) : null
   );
 
   const patientId = result.lastInsertRowid;
   const patientName = nume.trim();
   const creatorName = req.user.name;
+
+  // Creare programări automate dacă s-a selectat periodicitate
+  let nrProgramari = 0;
+  if (periodicitate && data_vizitei) {
+    if (periodicitate === '1_vizita') {
+      db.prepare(`
+        INSERT INTO vizite_programate (pacient_id, data_programata, ora_programata, angajat_responsabil)
+        VALUES (?, ?, ?, ?)
+      `).run(patientId, data_vizitei, '08:00', req.user.id);
+      nrProgramari = 1;
+    } else if (periodicitate === '2_vizite') {
+      const ora1 = ora_prima_vizita || '08:00';
+      const ora2 = ora_a_doua_vizita || '16:00';
+      db.prepare(`
+        INSERT INTO vizite_programate (pacient_id, data_programata, ora_programata, angajat_responsabil)
+        VALUES (?, ?, ?, ?)
+      `).run(patientId, data_vizitei, ora1, req.user.id);
+      db.prepare(`
+        INSERT INTO vizite_programate (pacient_id, data_programata, ora_programata, angajat_responsabil)
+        VALUES (?, ?, ?, ?)
+      `).run(patientId, data_vizitei, ora2, req.user.id);
+      nrProgramari = 2;
+    }
+  }
 
   // Notificari push (async, nu blocam raspunsul)
   if (redirectId) {
@@ -101,7 +138,9 @@ router.post('/', authenticate, (req, res) => {
   }
   sendToAdmins('Pacient nou adaugat', `Pacient: ${patientName} de catre ${creatorName}.`);
 
-  res.status(201).json({ id: patientId });
+  const response = { id: patientId };
+  if (nrProgramari > 0) response.programari = nrProgramari;
+  res.status(201).json(response);
 });
 
 router.put('/:id', authenticate, (req, res) => {

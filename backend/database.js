@@ -132,6 +132,20 @@ function migrateRedirectionatCatreId() {
   } catch (_) {}
 }
 
+// ===== Migrare: adaugă coloane tip_pacient și CASS în patients =====
+function migrateTipPacient() {
+  const cols = ['tip_pacient', 'perioada_cass_inceput', 'perioada_cass_sfarsit', 'zile_cass'];
+  const defs = [
+    "ALTER TABLE patients ADD COLUMN tip_pacient TEXT DEFAULT 'PRIVAT'",
+    'ALTER TABLE patients ADD COLUMN perioada_cass_inceput TEXT',
+    'ALTER TABLE patients ADD COLUMN perioada_cass_sfarsit TEXT',
+    'ALTER TABLE patients ADD COLUMN zile_cass INTEGER'
+  ];
+  defs.forEach((sql, i) => {
+    try { sqlJsDb.exec(sql); saveDb(); console.log(`✓ Migration: coloana ${cols[i]} adăugată`); } catch (_) {}
+  });
+}
+
 // ===== Migrare: creare tabelă vizite_programate =====
 function migrateViziteProgramate() {
   try {
@@ -272,6 +286,10 @@ async function initDatabase() {
       data_inregistrare TEXT DEFAULT (datetime('now', 'localtime')),
       status_preluare TEXT DEFAULT 'ACTIV',
       redirectionat_catre_id INTEGER,
+      tip_pacient TEXT DEFAULT 'PRIVAT',
+      perioada_cass_inceput TEXT,
+      perioada_cass_sfarsit TEXT,
+      zile_cass INTEGER,
       FOREIGN KEY (utilizator_creator_id) REFERENCES users(id),
       FOREIGN KEY (redirectionat_catre_id) REFERENCES users(id)
     );
@@ -357,6 +375,7 @@ async function initDatabase() {
   migrateAddPozeColumn();
   migrateStatusPreluare();
   migrateRedirectionatCatreId();
+  migrateTipPacient();
   migrateViziteProgramate();
   migratePushSubscriptions();
   migrateNotificari();
