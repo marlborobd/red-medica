@@ -217,6 +217,26 @@ router.put('/:id/redistribuie', authenticate, (req, res) => {
   res.json({ success: true });
 });
 
+// PUT /:id/sold — setează suma inițială de plată pentru pacient
+router.put('/:id/sold', authenticate, (req, res) => {
+  const db = getDb();
+  const patient = db.prepare('SELECT * FROM patients WHERE id = ?').get(req.params.id);
+  if (!patient) return res.status(404).json({ error: 'Pacient negăsit' });
+
+  const { sold_initial } = req.body;
+  if (sold_initial === undefined || sold_initial === null || sold_initial === '') {
+    return res.status(400).json({ error: 'sold_initial este obligatoriu' });
+  }
+
+  const soldInitialNum = parseFloat(sold_initial) || 0;
+  const row = db.prepare('SELECT COALESCE(SUM(suma_incasata), 0) as total FROM visits WHERE patient_id = ?').get(req.params.id);
+  const totalIncasat = row ? (row.total || 0) : 0;
+  const soldRamas = soldInitialNum - totalIncasat;
+
+  db.prepare('UPDATE patients SET sold_initial = ?, sold_ramas = ? WHERE id = ?').run(soldInitialNum, soldRamas, req.params.id);
+  res.json({ success: true, sold_ramas: soldRamas });
+});
+
 router.delete('/:id', authenticate, requireAdmin, (req, res) => {
   const db = getDb();
   db.prepare('DELETE FROM visits WHERE patient_id = ?').run(req.params.id);

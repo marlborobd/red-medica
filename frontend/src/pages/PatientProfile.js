@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getPatient, getVisits, deleteVisit, updatePatient, createScheduledVisit, getEmployees } from '../services/api';
+import { getPatient, getVisits, deleteVisit, updatePatient, createScheduledVisit, getEmployees, setPatientSold } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 
 function formatDate(d) {
@@ -52,6 +52,8 @@ export default function PatientProfile() {
   const [employees, setEmployees] = useState([]);
   const [scheduleSaving, setScheduleSaving] = useState(false);
   const [scheduleError, setScheduleError] = useState('');
+  const [soldInput, setSoldInput] = useState('');
+  const [soldSaving, setSoldSaving] = useState(false);
 
   const showToast = (msg, type = 'success') => setToast({ msg, type });
 
@@ -210,6 +212,25 @@ export default function PatientProfile() {
   const totalFacturat = visits.reduce((s, v) => s + (Number(v.suma_de_plata) || 0), 0);
   const totalIncasat = visits.reduce((s, v) => s + (Number(v.suma_incasata) || 0), 0);
 
+  const soldInitial = Number(patient?.sold_initial) || 0;
+  const soldRamas = Number(patient?.sold_ramas) || 0;
+  const soldEditable = soldRamas <= 0;
+
+  const handleSetSold = async () => {
+    if (!soldInput && soldInput !== 0) return;
+    setSoldSaving(true);
+    try {
+      await setPatientSold(id, soldInput);
+      showToast('Suma de plată a fost setată.');
+      loadData();
+      setSoldInput('');
+    } catch (err) {
+      showToast(err.response?.data?.error || 'Eroare la setare sold', 'error');
+    } finally {
+      setSoldSaving(false);
+    }
+  };
+
   return (
     <>
       {toast && <Toast message={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
@@ -366,6 +387,57 @@ export default function PatientProfile() {
                     <button className="btn btn-primary w-100" onClick={() => navigate(`/pacienti/${id}/vizita`)}>
                       + Adaugă Vizită Nouă
                     </button>
+                  </div>
+                </div>
+              </div>
+
+              <div className="card">
+                <div className="card-header"><span className="card-title">💳 Plăți</span></div>
+                <div className="card-body">
+                  <div className="info-list" style={{ marginBottom: 16 }}>
+                    <div className="info-row">
+                      <span className="info-label">Sumă Inițială</span>
+                      <span className="info-value"><strong>{soldInitial.toLocaleString('ro-RO')} lei</strong></span>
+                    </div>
+                    <div className="info-row">
+                      <span className="info-label">Total Încasat</span>
+                      <span className="info-value" style={{ color: 'var(--secondary)', fontWeight: 700 }}>{totalIncasat.toLocaleString('ro-RO')} lei</span>
+                    </div>
+                    <div className="info-row">
+                      <span className="info-label">Sold Rămas</span>
+                      <span className="info-value" style={{ color: soldRamas <= 0 ? 'var(--secondary)' : 'var(--danger)', fontWeight: 700 }}>
+                        {soldRamas.toLocaleString('ro-RO')} lei
+                      </span>
+                    </div>
+                  </div>
+                  {soldRamas <= 0 && soldInitial > 0 && (
+                    <div style={{ background: '#dcfce7', border: '1px solid #86efac', borderRadius: 8, padding: '8px 12px', marginBottom: 14, color: '#15803d', fontWeight: 700, fontSize: 14 }}>
+                      ✓ Achitat complet
+                    </div>
+                  )}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    <label className="form-label" style={{ marginBottom: 0 }}>Sumă De Plată (lei)</label>
+                    {soldEditable ? (
+                      <div style={{ display: 'flex', gap: 8 }}>
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          className="form-control"
+                          placeholder="0.00"
+                          value={soldInput}
+                          onChange={e => setSoldInput(e.target.value)}
+                          inputMode="decimal"
+                        />
+                        <button className="btn btn-primary" onClick={handleSetSold} disabled={soldSaving || soldInput === ''} style={{ whiteSpace: 'nowrap' }}>
+                          {soldSaving ? 'Se salvează...' : 'Setează'}
+                        </button>
+                      </div>
+                    ) : (
+                      <div style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '10px 14px', fontSize: 14, color: 'var(--danger)', fontWeight: 700 }}>
+                        Sold rămas: {soldRamas.toLocaleString('ro-RO')} lei
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>

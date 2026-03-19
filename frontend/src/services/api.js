@@ -37,6 +37,7 @@ export const deletePatient = (id) => api.delete(`/patients/${id}`);
 export const getPendingPatients = () => api.get('/patients/pending');
 export const updatePatientStatus = (id, status) => api.put(`/patients/${id}/status`, { status });
 export const redistribuiePatient = (id, redirectionat_catre_id) => api.put(`/patients/${id}/redistribuie`, { redirectionat_catre_id });
+export const setPatientSold = (id, sold_initial) => api.put(`/patients/${id}/sold`, { sold_initial });
 
 // Visits
 export const getVisits = (patientId) => api.get(`/visits/patient/${patientId}`);

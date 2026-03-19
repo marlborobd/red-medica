@@ -4,6 +4,14 @@ const { getDb } = require('../database');
 const { authenticate } = require('../middleware/auth');
 const { sendToAdmins } = require('../notifications');
 
+function recalcSold(db, patient_id) {
+  const row = db.prepare('SELECT COALESCE(SUM(suma_incasata), 0) as total FROM visits WHERE patient_id = ?').get(patient_id);
+  const totalIncasat = row ? (row.total || 0) : 0;
+  const patient = db.prepare('SELECT sold_initial FROM patients WHERE id = ?').get(patient_id);
+  const soldInitial = patient ? (patient.sold_initial || 0) : 0;
+  db.prepare('UPDATE patients SET sold_ramas = ? WHERE id = ?').run(soldInitial - totalIncasat, patient_id);
+}
+
 
 router.get('/patient/:patientId', authenticate, (req, res) => {
   const db = getDb();
@@ -68,6 +76,9 @@ router.post('/', authenticate, (req, res) => {
   );
   const visitId = result.lastInsertRowid;
 
+  // Recalculează sold_ramas
+  recalcSold(db, patient_id);
+
   // Notifica adminii
   const patientRow = db.prepare('SELECT nume FROM patients WHERE id = ?').get(patient_id);
   sendToAdmins('Vizita noua creata', `Vizita pentru pacientul ${patientRow ? patientRow.nume : '#' + patient_id} de catre ${req.user.name}.`);
@@ -101,6 +112,7 @@ router.put('/:id', authenticate, (req, res) => {
     poze !== undefined ? poze : (visit.poze || '[]'),
     req.params.id
   );
+  recalcSold(db, visit.patient_id);
   res.json({ success: true });
 });
 
@@ -112,6 +124,7 @@ router.delete('/:id', authenticate, (req, res) => {
     return res.status(403).json({ error: 'Acces interzis' });
   }
   db.prepare('DELETE FROM visits WHERE id = ?').run(req.params.id);
+  recalcSold(db, visit.patient_id);
   res.json({ success: true });
 });
 

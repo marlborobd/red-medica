@@ -132,6 +132,12 @@ function migrateRedirectionatCatreId() {
   } catch (_) {}
 }
 
+// ===== Migrare: adaugă coloane sold_initial și sold_ramas în patients =====
+function migrateSoldInitial() {
+  try { sqlJsDb.exec('ALTER TABLE patients ADD COLUMN sold_initial REAL DEFAULT 0'); saveDb(); console.log('✓ Migration: coloana sold_initial adăugată'); } catch (_) {}
+  try { sqlJsDb.exec('ALTER TABLE patients ADD COLUMN sold_ramas REAL DEFAULT 0'); saveDb(); console.log('✓ Migration: coloana sold_ramas adăugată'); } catch (_) {}
+}
+
 // ===== Migrare: adaugă coloane tip_pacient și CASS în patients =====
 function migrateTipPacient() {
   const cols = ['tip_pacient', 'perioada_cass_inceput', 'perioada_cass_sfarsit', 'zile_cass'];
@@ -290,6 +296,8 @@ async function initDatabase() {
       perioada_cass_inceput TEXT,
       perioada_cass_sfarsit TEXT,
       zile_cass INTEGER,
+      sold_initial REAL DEFAULT 0,
+      sold_ramas REAL DEFAULT 0,
       FOREIGN KEY (utilizator_creator_id) REFERENCES users(id),
       FOREIGN KEY (redirectionat_catre_id) REFERENCES users(id)
     );
@@ -376,6 +384,7 @@ async function initDatabase() {
   migrateStatusPreluare();
   migrateRedirectionatCatreId();
   migrateTipPacient();
+  migrateSoldInitial();
   migrateViziteProgramate();
   migratePushSubscriptions();
   migrateNotificari();
