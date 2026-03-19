@@ -118,8 +118,14 @@ export default function AddVisit() {
     setSaving(true);
     setError('');
     try {
+      const soldInitial = Number(patient?.sold_initial) || 0;
       const soldRamas = Number(patient?.sold_ramas) || 0;
-      const payload = { ...form, suma_de_plata: soldRamas, poze: JSON.stringify(poze) };
+      // Cazul 2: sold existent, suma_de_plata = sold_ramas (read-only în UI)
+      // Cazurile 1 și 3: utilizatorul a introdus suma_de_plata în form
+      const sumaDePlata = (soldInitial > 0 && soldRamas > 0)
+        ? soldRamas
+        : (Number(form.suma_de_plata) || 0);
+      const payload = { ...form, suma_de_plata: sumaDePlata, poze: JSON.stringify(poze) };
       if (isEdit) {
         await updateVisit(visitId, payload);
       } else {
@@ -354,22 +360,54 @@ export default function AddVisit() {
           <div className="card-header"><span className="card-title">💰 Plăți</span></div>
           <div className="card-body">
             {(() => {
+              const soldInitial = Number(patient?.sold_initial) || 0;
               const soldRamas = Number(patient?.sold_ramas) || 0;
               const sumaIncasata = Number(form.suma_incasata) || 0;
+
+              // Cazul 1: sold_initial nu e setat — prima vizită sau fără sumă
+              if (soldInitial === 0) {
+                return (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                    <div className="form-group">
+                      <label className="form-label">Sumă De Plată (lei)</label>
+                      <input name="suma_de_plata" type="number" step="0.01" min="0" className="form-control" placeholder="0.00" value={form.suma_de_plata} onChange={handleChange} inputMode="decimal" />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">Sumă Încasată (lei)</label>
+                      <input name="suma_incasata" type="number" step="0.01" min="0" className="form-control" placeholder="0.00" value={form.suma_incasata} onChange={handleChange} inputMode="decimal" />
+                    </div>
+                  </div>
+                );
+              }
+
+              // Cazul 3: sold_initial setat, sold_ramas = 0 — achitat complet, sumă nouă
+              if (soldRamas <= 0) {
+                return (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                    <div style={{ background: '#dcfce7', border: '1px solid #86efac', borderRadius: 8, padding: '10px 14px', color: '#15803d', fontWeight: 700, fontSize: 14 }}>
+                      ✓ Achitat complet
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">Sumă De Plată nouă (lei)</label>
+                      <input name="suma_de_plata" type="number" step="0.01" min="0" className="form-control" placeholder="0.00" value={form.suma_de_plata} onChange={handleChange} inputMode="decimal" />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">Sumă Încasată (lei)</label>
+                      <input name="suma_incasata" type="number" step="0.01" min="0" className="form-control" placeholder="0.00" value={form.suma_incasata} onChange={handleChange} inputMode="decimal" />
+                    </div>
+                  </div>
+                );
+              }
+
+              // Cazul 2: sold_initial setat, sold_ramas > 0
               const soldDupaPlata = soldRamas - sumaIncasata;
               return (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                   <div className="form-group">
                     <label className="form-label">Sold Rămas</label>
-                    {soldRamas === 0 ? (
-                      <div style={{ background: '#dcfce7', border: '1px solid #86efac', borderRadius: 'var(--radius)', padding: '10px 14px', color: '#15803d', fontWeight: 700, fontSize: 15 }}>
-                        ✓ Achitat complet
-                      </div>
-                    ) : (
-                      <div style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '10px 14px', color: 'var(--danger)', fontWeight: 700, fontSize: 15 }}>
-                        Sold Rămas: {soldRamas.toLocaleString('ro-RO')} lei
-                      </div>
-                    )}
+                    <div style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '10px 14px', color: 'var(--danger)', fontWeight: 700, fontSize: 15 }}>
+                      Sold Rămas: {soldRamas.toLocaleString('ro-RO')} lei
+                    </div>
                   </div>
                   <div className="form-group">
                     <label className="form-label">Sumă Încasată (lei)</label>

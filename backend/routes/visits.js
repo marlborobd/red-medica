@@ -54,6 +54,18 @@ router.post('/', authenticate, (req, res) => {
   const patient = db.prepare('SELECT * FROM patients WHERE id = ?').get(patient_id);
   if (!patient) return res.status(404).json({ error: 'Pacient negăsit' });
 
+  // Determină dacă trebuie setat sold_initial (cazul 1: fără sold, sau cazul 3: achitat complet)
+  const sumaDePlataNum = parseFloat(suma_de_plata) || 0;
+  const shouldSetSoldInitial = sumaDePlataNum > 0 &&
+    (!patient.sold_initial || patient.sold_initial === 0 || patient.sold_ramas <= 0);
+
+  // Dacă trebuie setat, calculăm totalIncasat ÎNAINTE de inserare
+  let totalIncasatBefore = 0;
+  if (shouldSetSoldInitial) {
+    const row = db.prepare('SELECT COALESCE(SUM(suma_incasata), 0) as total FROM visits WHERE patient_id = ?').get(patient_id);
+    totalIncasatBefore = row ? (row.total || 0) : 0;
+  }
+
   const now = new Date();
   const data = now.toISOString().split('T')[0];
   const ora = now.toTimeString().split(' ')[0].substring(0, 5);
@@ -71,12 +83,16 @@ router.post('/', authenticate, (req, res) => {
     perioada_tratament_inceput || null, perioada_tratament_sfarsit || null,
     zile_cass || 0, servicii_efectuate || '', stare_pacient || '',
     medicamente || '', tensiune || '', temperatura || null,
-    observatii || '', suma_de_plata || 0, suma_incasata || 0,
+    observatii || '', sumaDePlataNum, parseFloat(suma_incasata) || 0,
     poze || '[]'
   );
   const visitId = result.lastInsertRowid;
 
-  // Recalculează sold_ramas
+  // Setează sold_initial dacă e cazul, apoi recalculează sold_ramas
+  if (shouldSetSoldInitial) {
+    const newSoldInitial = totalIncasatBefore + sumaDePlataNum;
+    db.prepare('UPDATE patients SET sold_initial = ? WHERE id = ?').run(newSoldInitial, patient_id);
+  }
   recalcSold(db, patient_id);
 
   // Notifica adminii
