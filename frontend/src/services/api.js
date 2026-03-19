@@ -45,6 +45,8 @@ export const getVisit = (id) => api.get(`/visits/${id}`);
 export const createVisit = (data) => api.post('/visits', data);
 export const updateVisit = (id, data) => api.put(`/visits/${id}`, data);
 export const deleteVisit = (id) => api.delete(`/visits/${id}`);
+export const updateVisitPlata = (id, suma_incasata) => api.put(`/visits/${id}/plata`, { suma_incasata });
+export const deleteVisitPlata = (id) => api.delete(`/visits/${id}/plata`);
 
 // Upload
 export const uploadPhoto = (file) => {

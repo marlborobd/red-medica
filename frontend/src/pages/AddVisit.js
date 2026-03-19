@@ -118,7 +118,8 @@ export default function AddVisit() {
     setSaving(true);
     setError('');
     try {
-      const payload = { ...form, poze: JSON.stringify(poze) };
+      const soldRamas = Number(patient?.sold_ramas) || 0;
+      const payload = { ...form, suma_de_plata: soldRamas, poze: JSON.stringify(poze) };
       if (isEdit) {
         await updateVisit(visitId, payload);
       } else {
@@ -142,8 +143,6 @@ export default function AddVisit() {
   const currentServices = form.servicii_efectuate
     ? form.servicii_efectuate.split(', ').filter(Boolean)
     : [];
-
-  const rest = Number(form.suma_de_plata || 0) - Number(form.suma_incasata || 0);
 
   return (
     <>
@@ -356,46 +355,41 @@ export default function AddVisit() {
           <div className="card-body">
             {(() => {
               const soldRamas = Number(patient?.sold_ramas) || 0;
-              const soldInitial = Number(patient?.sold_initial) || 0;
               const sumaIncasata = Number(form.suma_incasata) || 0;
               const soldDupaPlata = soldRamas - sumaIncasata;
               return (
-                <>
-                  {soldInitial > 0 && (
-                    <div style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '10px 14px', marginBottom: 14 }}>
-                      <span style={{ fontSize: 14, color: 'var(--text-secondary)' }}>Sold rămas: </span>
-                      <strong style={{ fontSize: 15, color: soldRamas > 0 ? 'var(--danger)' : 'var(--secondary)' }}>
-                        {soldRamas.toLocaleString('ro-RO')} lei
-                      </strong>
-                    </div>
-                  )}
-                  <div className="form-grid">
-                    <div className="form-group">
-                      <label className="form-label">Sumă de Plată (lei)</label>
-                      <input name="suma_de_plata" type="number" step="0.01" min="0" className="form-control" placeholder="0.00" value={form.suma_de_plata} onChange={handleChange} inputMode="decimal" />
-                    </div>
-                    <div className="form-group">
-                      <label className="form-label">Sumă Încasată (lei)</label>
-                      <input name="suma_incasata" type="number" step="0.01" min="0" className="form-control" placeholder="0.00" value={form.suma_incasata} onChange={handleChange} inputMode="decimal" />
-                    </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                  <div className="form-group">
+                    <label className="form-label">Sold Rămas</label>
+                    {soldRamas === 0 ? (
+                      <div style={{ background: '#dcfce7', border: '1px solid #86efac', borderRadius: 'var(--radius)', padding: '10px 14px', color: '#15803d', fontWeight: 700, fontSize: 15 }}>
+                        ✓ Achitat complet
+                      </div>
+                    ) : (
+                      <div style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '10px 14px', color: 'var(--danger)', fontWeight: 700, fontSize: 15 }}>
+                        Sold Rămas: {soldRamas.toLocaleString('ro-RO')} lei
+                      </div>
+                    )}
                   </div>
-                  {soldInitial > 0 && sumaIncasata > 0 && (
-                    <div style={{ background: soldDupaPlata > 0 ? '#fef3c7' : '#dcfce7', border: `1px solid ${soldDupaPlata > 0 ? '#fcd34d' : '#86efac'}`, borderRadius: 8, padding: '8px 12px', marginTop: 10, fontSize: 14 }}>
-                      <span style={{ color: 'var(--text-secondary)' }}>Sold după plată: </span>
-                      <strong style={{ color: soldDupaPlata > 0 ? '#b45309' : '#15803d' }}>
-                        {soldDupaPlata.toLocaleString('ro-RO')} lei
-                      </strong>
-                    </div>
+                  <div className="form-group">
+                    <label className="form-label">Sumă Încasată (lei)</label>
+                    <input name="suma_incasata" type="number" step="0.01" min="0" className="form-control" placeholder="0.00" value={form.suma_incasata} onChange={handleChange} inputMode="decimal" />
+                  </div>
+                  {sumaIncasata > 0 && (
+                    soldDupaPlata < 0 ? (
+                      <div style={{ background: '#fee2e2', border: '1px solid #fca5a5', borderRadius: 8, padding: '8px 12px', fontSize: 14, color: '#b91c1c', fontWeight: 700 }}>
+                        ⚠️ Suma introdusă depășește soldul rămas
+                      </div>
+                    ) : (
+                      <div style={{ background: soldDupaPlata === 0 ? '#dcfce7' : '#fef3c7', border: `1px solid ${soldDupaPlata === 0 ? '#86efac' : '#fcd34d'}`, borderRadius: 8, padding: '8px 12px', fontSize: 14 }}>
+                        <span style={{ color: 'var(--text-secondary)' }}>Sold după această plată: </span>
+                        <strong style={{ color: soldDupaPlata === 0 ? '#15803d' : '#b45309' }}>
+                          {soldDupaPlata.toLocaleString('ro-RO')} lei
+                        </strong>
+                      </div>
+                    )
                   )}
-                  {form.suma_de_plata && form.suma_incasata && rest > 0 && !soldInitial && (
-                    <div className="alert alert-warning mt-2">
-                      ⚠️ Rest de plată: <strong>{rest.toLocaleString('ro-RO')} lei</strong>
-                    </div>
-                  )}
-                  {form.suma_de_plata && form.suma_incasata && rest <= 0 && Number(form.suma_de_plata) > 0 && !soldInitial && (
-                    <div className="alert alert-success mt-2">✓ Plata este completă</div>
-                  )}
-                </>
+                </div>
               );
             })()}
           </div>

@@ -116,6 +116,36 @@ router.put('/:id', authenticate, (req, res) => {
   res.json({ success: true });
 });
 
+// PUT /:id/plata — editează doar suma_incasata
+router.put('/:id/plata', authenticate, (req, res) => {
+  const db = getDb();
+  const visit = db.prepare('SELECT * FROM visits WHERE id = ?').get(req.params.id);
+  if (!visit) return res.status(404).json({ error: 'Vizita negăsită' });
+  if (req.user.role !== 'admin' && visit.angajat_id !== req.user.id) {
+    return res.status(403).json({ error: 'Acces interzis' });
+  }
+  const { suma_incasata } = req.body;
+  if (suma_incasata === undefined) return res.status(400).json({ error: 'suma_incasata obligatorie' });
+  db.prepare('UPDATE visits SET suma_incasata = ? WHERE id = ?').run(parseFloat(suma_incasata) || 0, req.params.id);
+  recalcSold(db, visit.patient_id);
+  const patient = db.prepare('SELECT sold_ramas FROM patients WHERE id = ?').get(visit.patient_id);
+  res.json({ success: true, sold_ramas: patient?.sold_ramas || 0 });
+});
+
+// DELETE /:id/plata — resetează suma_incasata la 0
+router.delete('/:id/plata', authenticate, (req, res) => {
+  const db = getDb();
+  const visit = db.prepare('SELECT * FROM visits WHERE id = ?').get(req.params.id);
+  if (!visit) return res.status(404).json({ error: 'Vizita negăsită' });
+  if (req.user.role !== 'admin' && visit.angajat_id !== req.user.id) {
+    return res.status(403).json({ error: 'Acces interzis' });
+  }
+  db.prepare('UPDATE visits SET suma_incasata = 0 WHERE id = ?').run(req.params.id);
+  recalcSold(db, visit.patient_id);
+  const patient = db.prepare('SELECT sold_ramas FROM patients WHERE id = ?').get(visit.patient_id);
+  res.json({ success: true, sold_ramas: patient?.sold_ramas || 0 });
+});
+
 router.delete('/:id', authenticate, (req, res) => {
   const db = getDb();
   const visit = db.prepare('SELECT * FROM visits WHERE id = ?').get(req.params.id);

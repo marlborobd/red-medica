@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getPatient, getVisits, deleteVisit, updatePatient, createScheduledVisit, getEmployees, setPatientSold } from '../services/api';
+import { getPatient, getVisits, deleteVisit, updatePatient, createScheduledVisit, getEmployees, setPatientSold, updateVisitPlata, deleteVisitPlata } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 
 function formatDate(d) {
@@ -54,6 +54,11 @@ export default function PatientProfile() {
   const [scheduleError, setScheduleError] = useState('');
   const [soldInput, setSoldInput] = useState('');
   const [soldSaving, setSoldSaving] = useState(false);
+  const [editPlataVisit, setEditPlataVisit] = useState(null);
+  const [editPlataInput, setEditPlataInput] = useState('');
+  const [editPlataSaving, setEditPlataSaving] = useState(false);
+  const [deletePlataVisit, setDeletePlataVisit] = useState(null);
+  const [deletePlataSaving, setDeletePlataSaving] = useState(false);
 
   const showToast = (msg, type = 'success') => setToast({ msg, type });
 
@@ -189,6 +194,34 @@ export default function PatientProfile() {
       setEditError(err.response?.data?.error || 'Eroare la salvare');
     } finally {
       setEditLoading(false);
+    }
+  };
+
+  const handleEditPlataSave = async () => {
+    setEditPlataSaving(true);
+    try {
+      await updateVisitPlata(editPlataVisit.id, editPlataInput);
+      setEditPlataVisit(null);
+      showToast('Plata a fost actualizată.');
+      loadData();
+    } catch (err) {
+      showToast(err.response?.data?.error || 'Eroare la actualizare', 'error');
+    } finally {
+      setEditPlataSaving(false);
+    }
+  };
+
+  const handleDeletePlataSave = async () => {
+    setDeletePlataSaving(true);
+    try {
+      await deleteVisitPlata(deletePlataVisit.id);
+      setDeletePlataVisit(null);
+      showToast('Plata a fost ștearsă.');
+      loadData();
+    } catch (err) {
+      showToast(err.response?.data?.error || 'Eroare la ștergere', 'error');
+    } finally {
+      setDeletePlataSaving(false);
     }
   };
 
@@ -489,6 +522,26 @@ export default function PatientProfile() {
                           </div>
                         </div>
 
+                        {/* Butoane plată */}
+                        {Number(v.suma_incasata) > 0 && (
+                          <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
+                            <button
+                              className="btn btn-ghost btn-sm"
+                              style={{ minHeight: 44, padding: '0 16px', fontWeight: 600, border: '1px solid var(--border)' }}
+                              onClick={() => { setEditPlataVisit(v); setEditPlataInput(String(v.suma_incasata)); }}
+                            >
+                              💳 Editează Plată
+                            </button>
+                            <button
+                              className="btn btn-danger btn-sm"
+                              style={{ minHeight: 44, padding: '0 16px' }}
+                              onClick={() => setDeletePlataVisit(v)}
+                            >
+                              🗑️ Șterge Plată
+                            </button>
+                          </div>
+                        )}
+
                         {/* Sumar mereu vizibil */}
                         <div className="visit-details">
                           {v.diagnostic && <div className="visit-detail"><span className="label">Diagnostic: </span><span className="value">{v.diagnostic}</span></div>}
@@ -776,6 +829,75 @@ export default function PatientProfile() {
                 boxShadow: '0 4px 24px rgba(0,0,0,0.4)'
               }}
             />
+          </div>
+        </div>
+      )}
+
+      {/* Modal editare plată */}
+      {editPlataVisit && (
+        <div className="modal-overlay" onClick={() => setEditPlataVisit(null)}>
+          <div className="modal" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <span className="modal-title">💳 Editează Plată</span>
+              <button className="modal-close" onClick={() => setEditPlataVisit(null)}>✕</button>
+            </div>
+            <div className="modal-body">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                <div className="form-group">
+                  <label className="form-label">Sumă De Plată</label>
+                  <div style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '10px 14px', fontSize: 14, color: 'var(--text)', fontWeight: 600 }}>
+                    {Number(editPlataVisit.suma_de_plata).toLocaleString('ro-RO')} lei
+                  </div>
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Sumă Încasată (lei) <span className="required">*</span></label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    className="form-control"
+                    placeholder="0.00"
+                    value={editPlataInput}
+                    onChange={e => setEditPlataInput(e.target.value)}
+                    inputMode="decimal"
+                    autoFocus
+                  />
+                </div>
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-ghost" onClick={() => setEditPlataVisit(null)}>Anulare</button>
+              <button className="btn btn-primary" onClick={handleEditPlataSave} disabled={editPlataSaving || editPlataInput === ''}>
+                {editPlataSaving ? 'Se salvează...' : '💾 Salvează'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal confirmare ștergere plată */}
+      {deletePlataVisit && (
+        <div className="modal-overlay" onClick={() => setDeletePlataVisit(null)}>
+          <div className="modal" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <span className="modal-title">⚠️ Șterge Plata</span>
+              <button className="modal-close" onClick={() => setDeletePlataVisit(null)}>✕</button>
+            </div>
+            <div className="modal-body">
+              <div className="alert alert-danger">
+                <span>🗑️</span>
+                <div>
+                  <strong>Ești sigur că vrei să ștergi plata de {Number(deletePlataVisit.suma_incasata).toLocaleString('ro-RO')} lei?</strong><br />
+                  <small>Suma va fi resetată la 0 și soldul pacientului va fi recalculat automat.</small>
+                </div>
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-ghost" onClick={() => setDeletePlataVisit(null)}>Anulare</button>
+              <button className="btn btn-danger" onClick={handleDeletePlataSave} disabled={deletePlataSaving}>
+                {deletePlataSaving ? 'Se șterge...' : '🗑️ Șterge Plata'}
+              </button>
+            </div>
           </div>
         </div>
       )}
