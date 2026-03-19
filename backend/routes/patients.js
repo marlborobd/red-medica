@@ -153,7 +153,7 @@ router.put('/:id', authenticate, (req, res) => {
     return res.status(403).json({ error: 'Acces interzis' });
   }
 
-  const { nume, data_nasterii, varsta, adresa, telefon, acord_gdpr } = req.body;
+  const { nume, data_nasterii, varsta, adresa, telefon, acord_gdpr, redirectionat_catre_id } = req.body;
 
   db.prepare(`
     UPDATE patients SET nume=?, data_nasterii=?, varsta=?, adresa=?, telefon=?, acord_gdpr=?
@@ -167,6 +167,26 @@ router.put('/:id', authenticate, (req, res) => {
     acord_gdpr !== undefined ? (acord_gdpr ? 1 : 0) : patient.acord_gdpr,
     req.params.id
   );
+
+  // Schimbare angajat responsabil
+  if (redirectionat_catre_id !== undefined) {
+    const newRedirectId = redirectionat_catre_id ? parseInt(redirectionat_catre_id) : null;
+    if (newRedirectId !== patient.redirectionat_catre_id) {
+      db.prepare('UPDATE patients SET redirectionat_catre_id = ?, status_preluare = ? WHERE id = ?')
+        .run(newRedirectId, 'PENDING', req.params.id);
+
+      if (newRedirectId) {
+        const newEmployee = db.prepare('SELECT email, name FROM users WHERE id = ?').get(newRedirectId);
+        if (newEmployee) {
+          sendNotification(newEmployee.email, 'Pacient redirecționat către tine',
+            `Pacientul ${patient.nume} a fost redirecționat către tine. Te rugăm să accepți sau să refuzi.`);
+        }
+        sendToAdmins('Pacient redirecționat',
+          `Pacientul ${patient.nume} a fost redirecționat către ${newEmployee ? newEmployee.name : '#' + newRedirectId}.`);
+      }
+    }
+  }
+
   res.json({ success: true });
 });
 

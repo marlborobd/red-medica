@@ -32,7 +32,7 @@ function Toast({ message, type, onClose }) {
 export default function PatientProfile() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { isAdmin } = useAuth();
+  const { isAdmin, user } = useAuth();
   const [patient, setPatient] = useState(null);
   const [visits, setVisits] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -175,10 +175,15 @@ export default function PatientProfile() {
       varsta: patient.varsta || '',
       adresa: patient.adresa || '',
       telefon: patient.telefon || '',
-      acord_gdpr: patient.acord_gdpr === 1
+      acord_gdpr: patient.acord_gdpr === 1,
+      redirectionat_catre_id: patient.redirectionat_catre_id || ''
     });
     setEditMode(true);
     setEditError('');
+    const canChangeEmployee = isAdmin || patient.utilizator_creator_id === user?.id;
+    if (canChangeEmployee && employees.length === 0) {
+      getEmployees().then(({ data }) => setEmployees(data)).catch(() => {});
+    }
   };
 
   const handleEditSave = async () => {
@@ -789,6 +794,21 @@ export default function PatientProfile() {
                   <input type="checkbox" id="edit_gdpr" checked={editForm.acord_gdpr || false} onChange={e => setEditForm(p => ({ ...p, acord_gdpr: e.target.checked }))} />
                   <label htmlFor="edit_gdpr">Pacientul și-a exprimat acordul GDPR</label>
                 </div>
+                {(isAdmin || patient.utilizator_creator_id === user?.id) && (
+                  <div className="form-group">
+                    <label className="form-label">Angajat Responsabil</label>
+                    <select
+                      className="form-control"
+                      value={editForm.redirectionat_catre_id || ''}
+                      onChange={e => setEditForm(p => ({ ...p, redirectionat_catre_id: e.target.value }))}
+                    >
+                      <option value="">— Neasignat —</option>
+                      {employees.map(emp => (
+                        <option key={emp.id} value={emp.id}>{emp.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
               </div>
             </div>
             <div className="modal-footer">
