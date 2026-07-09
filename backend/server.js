@@ -1,4 +1,5 @@
 // versiunea cu volum persistent
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
@@ -58,6 +59,7 @@ app.use('/api/push', pushRoutes);
 app.use('/api/scheduled-visits', scheduledVisitsRoutes);
 app.use('/api/foi-parcurs', foiParcursRoutes);
 app.use('/api/setari', setariRoutes);
+app.use('/api/amb', require('./routes/ambulante'));
 
 // ===== Backup endpoints (doar admin autentificat) =====
 app.get('/api/backup/manual', authenticate, requireAdmin, async (req, res) => {

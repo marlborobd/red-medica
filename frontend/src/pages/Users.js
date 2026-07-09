@@ -120,8 +120,8 @@ export default function Users() {
                       </td>
                       <td style={{ color: 'var(--text-secondary)' }}>{u.email}</td>
                       <td>
-                        <span className={`badge ${u.role === 'admin' ? 'badge-purple' : 'badge-blue'}`}>
-                          {u.role === 'admin' ? '🛡️ Administrator' : '👤 Angajat'}
+                        <span className={`badge ${u.role === 'admin' ? 'badge-purple' : u.role === 'ambulanta' ? 'badge-green' : 'badge-blue'}`}>
+                          {u.role === 'admin' ? '🛡️ Administrator' : u.role === 'ambulanta' ? '🚑 Ambulanță' : '👤 Angajat'}
                         </span>
                       </td>
                       <td>
@@ -180,6 +180,7 @@ export default function Users() {
                   <select className="form-control" value={form.role} onChange={e => setForm(p => ({ ...p, role: e.target.value }))}>
                     <option value="employee">👤 Angajat</option>
                     <option value="admin">🛡️ Administrator</option>
+                    <option value="ambulanta">🚑 Ambulanță</option>
                   </select>
                 </div>
               </div>

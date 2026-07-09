@@ -52,3 +52,4 @@ Desktop.ini
 dist/
 coverage/
 .nyc_output/
+backend/asistenta.db

@@ -215,6 +215,78 @@ function migrateNotificari() {
   }
 }
 
+// ===== Migrare: adaugă viteza_medie_sursa în amb_curse =====
+function migrateVitezaMedieSursa() {
+  try {
+    sqlJsDb.exec("ALTER TABLE amb_curse ADD COLUMN viteza_medie_sursa TEXT NOT NULL DEFAULT 'auto'");
+    saveDb();
+    console.log('✓ Migration: coloana viteza_medie_sursa adăugată în amb_curse');
+  } catch (_) {}
+}
+
+// ===== Migrare: creare tabele ambulanță (amb_ambulante, amb_zile, amb_curse) =====
+function migrateAmbulante() {
+  try {
+    sqlJsDb.exec(`
+      CREATE TABLE IF NOT EXISTS amb_ambulante (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        numar_inmatriculare TEXT UNIQUE NOT NULL,
+        odometru_curent REAL NOT NULL DEFAULT 0,
+        activ INTEGER NOT NULL DEFAULT 1,
+        created_at TEXT DEFAULT (datetime('now')),
+        updated_at TEXT DEFAULT (datetime('now'))
+      )
+    `);
+    sqlJsDb.exec(`
+      CREATE TABLE IF NOT EXISTS amb_zile (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        ambulanta_id INTEGER NOT NULL REFERENCES amb_ambulante(id),
+        data_activitate TEXT NOT NULL,
+        locatie_start TEXT NOT NULL,
+        locatie_final TEXT,
+        odometru_start REAL NOT NULL,
+        odometru_final REAL,
+        status TEXT NOT NULL DEFAULT 'deschisa',
+        creat_de INTEGER,
+        created_at TEXT DEFAULT (datetime('now')),
+        updated_at TEXT DEFAULT (datetime('now')),
+        UNIQUE (ambulanta_id, data_activitate)
+      )
+    `);
+    sqlJsDb.exec(`
+      CREATE TABLE IF NOT EXISTS amb_curse (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        zi_id INTEGER NOT NULL REFERENCES amb_zile(id) ON DELETE CASCADE,
+        ordine INTEGER NOT NULL,
+        data_cursa TEXT NOT NULL,
+        ora_plecare TEXT NOT NULL,
+        ora_sosire TEXT NOT NULL,
+        locatie_plecare TEXT NOT NULL,
+        locatie_sosire TEXT NOT NULL,
+        distanta_km REAL NOT NULL,
+        distanta_sursa TEXT NOT NULL DEFAULT 'auto',
+        odometru_start REAL NOT NULL,
+        odometru_final REAL NOT NULL,
+        durata_condus_sec INTEGER NOT NULL,
+        stationare_pornit_sec INTEGER NOT NULL DEFAULT 0,
+        stationare_oprit_sec INTEGER,
+        viteza_medie INTEGER,
+        viteza_maxima INTEGER,
+        created_at TEXT DEFAULT (datetime('now')),
+        updated_at TEXT DEFAULT (datetime('now'))
+      )
+    `);
+    sqlJsDb.exec(`
+      CREATE INDEX IF NOT EXISTS idx_amb_zile ON amb_zile(ambulanta_id, data_activitate);
+      CREATE INDEX IF NOT EXISTS idx_amb_curse ON amb_curse(zi_id, ordine);
+    `);
+    saveDb();
+    console.log('✓ Migration: tabele ambulanță create (amb_ambulante, amb_zile, amb_curse)');
+  } catch (err) {
+    console.error('[Migration ambulante]', err.message);
+  }
+}
+
 // ===== Migrare: creare tabele foi_parcurs și setari_angajat =====
 function migrateFoiParcurs() {
   try {
@@ -376,6 +448,56 @@ async function initDatabase() {
       angajat_email TEXT PRIMARY KEY,
       numar_inmatriculare TEXT
     );
+
+    CREATE TABLE IF NOT EXISTS amb_ambulante (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      numar_inmatriculare TEXT UNIQUE NOT NULL,
+      odometru_curent REAL NOT NULL DEFAULT 0,
+      activ INTEGER NOT NULL DEFAULT 1,
+      created_at TEXT DEFAULT (datetime('now')),
+      updated_at TEXT DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS amb_zile (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      ambulanta_id INTEGER NOT NULL REFERENCES amb_ambulante(id),
+      data_activitate TEXT NOT NULL,
+      locatie_start TEXT NOT NULL,
+      locatie_final TEXT,
+      odometru_start REAL NOT NULL,
+      odometru_final REAL,
+      status TEXT NOT NULL DEFAULT 'deschisa',
+      creat_de INTEGER,
+      created_at TEXT DEFAULT (datetime('now')),
+      updated_at TEXT DEFAULT (datetime('now')),
+      UNIQUE (ambulanta_id, data_activitate)
+    );
+
+    CREATE TABLE IF NOT EXISTS amb_curse (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      zi_id INTEGER NOT NULL REFERENCES amb_zile(id) ON DELETE CASCADE,
+      ordine INTEGER NOT NULL,
+      data_cursa TEXT NOT NULL,
+      ora_plecare TEXT NOT NULL,
+      ora_sosire TEXT NOT NULL,
+      locatie_plecare TEXT NOT NULL,
+      locatie_sosire TEXT NOT NULL,
+      distanta_km REAL NOT NULL,
+      distanta_sursa TEXT NOT NULL DEFAULT 'auto',
+      odometru_start REAL NOT NULL,
+      odometru_final REAL NOT NULL,
+      durata_condus_sec INTEGER NOT NULL,
+      stationare_pornit_sec INTEGER NOT NULL DEFAULT 0,
+      stationare_oprit_sec INTEGER,
+      viteza_medie INTEGER,
+      viteza_medie_sursa TEXT NOT NULL DEFAULT 'auto',
+      viteza_maxima INTEGER,
+      created_at TEXT DEFAULT (datetime('now')),
+      updated_at TEXT DEFAULT (datetime('now'))
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_amb_zile ON amb_zile(ambulanta_id, data_activitate);
+    CREATE INDEX IF NOT EXISTS idx_amb_curse ON amb_curse(zi_id, ordine);
   `);
 
   // Migrări pentru baze de date existente
@@ -389,6 +511,8 @@ async function initDatabase() {
   migratePushSubscriptions();
   migrateNotificari();
   migrateFoiParcurs();
+  migrateAmbulante();
+  migrateVitezaMedieSursa();
 
   // Admin
   const adminEmail = process.env.ADMIN_EMAIL || 'admin@asistenta.ro';

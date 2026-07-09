@@ -12,6 +12,8 @@ import Reports from './pages/Reports';
 import Users from './pages/Users';
 import FoaieParcurs from './pages/FoaieParcurs';
 import FoaieParcursAdmin from './pages/FoaieParcursAdmin';
+import Ambulante from './pages/ambulante/Ambulante';
+import AmbulantaActivitate from './pages/ambulante/AmbulantaActivitate';
 
 function PrivateRoute({ children }) {
   const { user, loading } = useAuth();
@@ -23,6 +25,22 @@ function AdminRoute({ children }) {
   const { user, isAdmin } = useAuth();
   if (!user) return <Navigate to="/login" replace />;
   if (!isAdmin) return <Navigate to="/" replace />;
+  return children;
+}
+
+// Rută accesibilă doar pentru admin și employee (nu ambulanță).
+function EmployeeRoute({ children }) {
+  const { user } = useAuth();
+  if (!user) return <Navigate to="/login" replace />;
+  if (user.role === 'ambulanta') return <Navigate to="/ambulante" replace />;
+  return children;
+}
+
+// Rută accesibilă pentru admin și ambulanță.
+function AmbRoute({ children }) {
+  const { user } = useAuth();
+  if (!user) return <Navigate to="/login" replace />;
+  if (user.role !== 'admin' && user.role !== 'ambulanta') return <Navigate to="/" replace />;
   return children;
 }
 
@@ -69,20 +87,26 @@ function UpdateBanner() {
 function AppRoutes() {
   const { user } = useAuth();
 
+  const loginRedirect = user
+    ? <Navigate to={user.role === 'ambulanta' ? '/ambulante' : '/'} replace />
+    : <Login />;
+
   return (
     <Routes>
-      <Route path="/login" element={user ? <Navigate to="/" replace /> : <Login />} />
+      <Route path="/login" element={loginRedirect} />
       <Route path="/" element={<PrivateRoute><Layout /></PrivateRoute>}>
-        <Route index element={<Dashboard />} />
-        <Route path="pacienti" element={<PatientList />} />
-        <Route path="pacienti/nou" element={<AddPatient />} />
-        <Route path="pacienti/:id" element={<PatientProfile />} />
-        <Route path="pacienti/:id/vizita" element={<AddVisit />} />
-        <Route path="pacienti/:id/vizita/:visitId" element={<AddVisit />} />
+        <Route index element={<EmployeeRoute><Dashboard /></EmployeeRoute>} />
+        <Route path="pacienti" element={<EmployeeRoute><PatientList /></EmployeeRoute>} />
+        <Route path="pacienti/nou" element={<EmployeeRoute><AddPatient /></EmployeeRoute>} />
+        <Route path="pacienti/:id" element={<EmployeeRoute><PatientProfile /></EmployeeRoute>} />
+        <Route path="pacienti/:id/vizita" element={<EmployeeRoute><AddVisit /></EmployeeRoute>} />
+        <Route path="pacienti/:id/vizita/:visitId" element={<EmployeeRoute><AddVisit /></EmployeeRoute>} />
         <Route path="rapoarte" element={<AdminRoute><Reports /></AdminRoute>} />
         <Route path="utilizatori" element={<AdminRoute><Users /></AdminRoute>} />
-        <Route path="foaie-parcurs" element={<FoaieParcurs />} />
+        <Route path="foaie-parcurs" element={<EmployeeRoute><FoaieParcurs /></EmployeeRoute>} />
         <Route path="foi-parcurs-admin" element={<AdminRoute><FoaieParcursAdmin /></AdminRoute>} />
+        <Route path="ambulante" element={<AmbRoute><Ambulante /></AmbRoute>} />
+        <Route path="ambulante/:id" element={<AmbRoute><AmbulantaActivitate /></AmbRoute>} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

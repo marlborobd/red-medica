@@ -12,10 +12,14 @@ const ADMIN_NAV_ITEMS = [
   { to: '/rapoarte', icon: '📈', label: 'Rapoarte' },
   { to: '/utilizatori', icon: '🔧', label: 'Utilizatori' },
   { to: '/foi-parcurs-admin', icon: '🗂️', label: 'Foi Parcurs Angajați' },
+  { to: '/ambulante', icon: '🚑', label: 'Ambulanță' },
+];
+const AMBULANTA_NAV_ITEMS = [
+  { to: '/ambulante', icon: '🚑', label: 'Ambulanță' },
 ];
 
 export default function Layout() {
-  const { user, logout, isAdmin } = useAuth();
+  const { user, logout, isAdmin, isAmbulanta } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -210,6 +214,8 @@ export default function Layout() {
     if (path === '/utilizatori') return 'Utilizatori';
     if (path === '/foaie-parcurs') return 'Foaie Parcurs';
     if (path === '/foi-parcurs-admin') return 'Foi Parcurs Angajați';
+    if (path === '/ambulante') return 'Ambulanță';
+    if (path.startsWith('/ambulante/')) return 'Activitate Ambulanță';
     return 'Red Medica';
   };
 
@@ -274,24 +280,10 @@ export default function Layout() {
         </div>
 
         <nav className="sidebar-nav">
-          <div className="nav-section">Principal</div>
-          {NAV_ITEMS.map(item => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              end={item.exact}
-              className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}
-              onClick={handleNavClick}
-            >
-              <span className="nav-icon">{item.icon}</span>
-              {item.label}
-            </NavLink>
-          ))}
-
-          {isAdmin && (
+          {isAmbulanta ? (
             <>
-              <div className="nav-section" style={{ marginTop: 8 }}>Administrator</div>
-              {ADMIN_NAV_ITEMS.map(item => (
+              <div className="nav-section">Ambulanță</div>
+              {AMBULANTA_NAV_ITEMS.map(item => (
                 <NavLink
                   key={item.to}
                   to={item.to}
@@ -303,18 +295,51 @@ export default function Layout() {
                 </NavLink>
               ))}
             </>
-          )}
+          ) : (
+            <>
+              <div className="nav-section">Principal</div>
+              {NAV_ITEMS.map(item => (
+                <NavLink
+                  key={item.to}
+                  to={item.to}
+                  end={item.exact}
+                  className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}
+                  onClick={handleNavClick}
+                >
+                  <span className="nav-icon">{item.icon}</span>
+                  {item.label}
+                </NavLink>
+              ))}
 
-          <div className="nav-section" style={{ marginTop: 8 }}>Acțiuni rapide</div>
-          <div
-            className="nav-item"
-            onClick={() => { navigate('/pacienti/nou'); handleNavClick(); }}
-            role="button"
-            tabIndex={0}
-          >
-            <span className="nav-icon">➕</span>
-            Adaugă Pacient
-          </div>
+              {isAdmin && (
+                <>
+                  <div className="nav-section" style={{ marginTop: 8 }}>Administrator</div>
+                  {ADMIN_NAV_ITEMS.map(item => (
+                    <NavLink
+                      key={item.to}
+                      to={item.to}
+                      className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}
+                      onClick={handleNavClick}
+                    >
+                      <span className="nav-icon">{item.icon}</span>
+                      {item.label}
+                    </NavLink>
+                  ))}
+                </>
+              )}
+
+              <div className="nav-section" style={{ marginTop: 8 }}>Acțiuni rapide</div>
+              <div
+                className="nav-item"
+                onClick={() => { navigate('/pacienti/nou'); handleNavClick(); }}
+                role="button"
+                tabIndex={0}
+              >
+                <span className="nav-icon">➕</span>
+                Adaugă Pacient
+              </div>
+            </>
+          )}
         </nav>
 
         <div style={{ padding: '8px 12px', borderTop: '1px solid #f0f0f0' }}>
@@ -327,7 +352,7 @@ export default function Layout() {
             <div>
               <div className="user-name">{user?.name}</div>
               <div className="user-role">
-                {user?.role === 'admin' ? '🛡️ Administrator' : '👤 Angajat'}
+                {user?.role === 'admin' ? '🛡️ Administrator' : user?.role === 'ambulanta' ? '🚑 Ambulanță' : '👤 Angajat'}
               </div>
             </div>
           </div>

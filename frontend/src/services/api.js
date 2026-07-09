@@ -95,4 +95,27 @@ export const triggerManualBackup = () => api.get('/backup/manual');
 export const triggerBackupManual = () => api.post('/backup/manual');
 export const getBackupStatus = () => api.get('/backup/status');
 
+// Ambulanțe
+export const getAmbulante = (params) => api.get('/amb/ambulante', { params });
+export const createAmbulanta = (data) => api.post('/amb/ambulante', data);
+export const updateAmbulanta = (id, data) => api.put(`/amb/ambulante/${id}`, data);
+export const deleteAmbulanta = (id) => api.delete(`/amb/ambulante/${id}`);
+
+// Zile de activitate
+export const getZile = (params) => api.get('/amb/zile', { params });
+export const createZi = (data) => api.post('/amb/zile', data);
+export const getZi = (id) => api.get(`/amb/zile/${id}`);
+export const updateZi = (id, data) => api.put(`/amb/zile/${id}`, data);
+export const finalizeazaZi = (id, data) => api.post(`/amb/zile/${id}/finalizare`, data);
+export const redeschideZi = (id) => api.post(`/amb/zile/${id}/redeschidere`);
+export const deleteZi = (id) => api.delete(`/amb/zile/${id}`);
+
+// Curse
+export const createCursa = (ziId, data) => api.post(`/amb/zile/${ziId}/curse`, data);
+export const updateCursa = (id, data) => api.put(`/amb/curse/${id}`, data);
+export const deleteCursa = (id) => api.delete(`/amb/curse/${id}`);
+
+// Distanță
+export const calcDistanta = (data) => api.post('/amb/distanta', data);
+
 export default api;
