@@ -118,4 +118,7 @@ export const deleteCursa = (id) => api.delete(`/amb/curse/${id}`);
 // Distanță
 export const calcDistanta = (data) => api.post('/amb/distanta', data);
 
+// Raport
+export const getRaportAmb = (params) => api.get('/amb/raport', { params });
+
 export default api;

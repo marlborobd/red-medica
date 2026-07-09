@@ -14,6 +14,7 @@ import FoaieParcurs from './pages/FoaieParcurs';
 import FoaieParcursAdmin from './pages/FoaieParcursAdmin';
 import Ambulante from './pages/ambulante/Ambulante';
 import AmbulantaActivitate from './pages/ambulante/AmbulantaActivitate';
+import AmbulantaRapoarte from './pages/ambulante/AmbulantaRapoarte';
 
 function PrivateRoute({ children }) {
   const { user, loading } = useAuth();
@@ -106,6 +107,7 @@ function AppRoutes() {
         <Route path="foaie-parcurs" element={<EmployeeRoute><FoaieParcurs /></EmployeeRoute>} />
         <Route path="foi-parcurs-admin" element={<AdminRoute><FoaieParcursAdmin /></AdminRoute>} />
         <Route path="ambulante" element={<AmbRoute><Ambulante /></AmbRoute>} />
+        <Route path="ambulante/rapoarte" element={<AmbRoute><AmbulantaRapoarte /></AmbRoute>} />
         <Route path="ambulante/:id" element={<AmbRoute><AmbulantaActivitate /></AmbRoute>} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />

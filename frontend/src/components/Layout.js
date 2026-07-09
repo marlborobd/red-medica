@@ -13,9 +13,11 @@ const ADMIN_NAV_ITEMS = [
   { to: '/utilizatori', icon: '🔧', label: 'Utilizatori' },
   { to: '/foi-parcurs-admin', icon: '🗂️', label: 'Foi Parcurs Angajați' },
   { to: '/ambulante', icon: '🚑', label: 'Ambulanță' },
+  { to: '/ambulante/rapoarte', icon: '📊', label: 'Rapoarte Amb.' },
 ];
 const AMBULANTA_NAV_ITEMS = [
   { to: '/ambulante', icon: '🚑', label: 'Ambulanță' },
+  { to: '/ambulante/rapoarte', icon: '📊', label: 'Rapoarte' },
 ];
 
 export default function Layout() {
@@ -215,6 +217,7 @@ export default function Layout() {
     if (path === '/foaie-parcurs') return 'Foaie Parcurs';
     if (path === '/foi-parcurs-admin') return 'Foi Parcurs Angajați';
     if (path === '/ambulante') return 'Ambulanță';
+    if (path === '/ambulante/rapoarte') return 'Rapoarte Ambulanță';
     if (path.startsWith('/ambulante/')) return 'Activitate Ambulanță';
     return 'Red Medica';
   };
