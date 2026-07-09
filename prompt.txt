@@ -1,0 +1,14 @@
+Două modificări la modulul ambulanță, doar frontend, fără să atingi backend-ul sau formatul de stocare din DB:
+
+1. Format oră european HH:MM (fără secunde) peste tot în UI și PDF:
+   - Inputurile de oră din modalele de cursă: type="time" simplu (fără step de secunde); la trimitere spre server completează ":00" la final ca să respecte formatul HH:MM:SS așteptat de backend
+   - Afișarea orelor în tabelul curselor, în lista zilelor și în PDF (ambPdf.js): taie secundele, afișează HH:MM
+   - Stocarea în DB rămâne neschimbată HH:MM:SS — doar afișarea și inputul se schimbă
+   - Duratele (durata condus, staționările) rămân în format HH:MM:SS, nu le modifica
+
+2. Butoane de editare și ștergere pe fiecare cursă:
+   - Verifică întâi dacă există deja în AmbulantaActivitate.js (erau cerute la Pasul 6) — dacă există dar nu sunt vizibile, repară afișarea (inclusiv pe mobil)
+   - Dacă lipsesc: adaugă pe fiecare rând de cursă (doar în zile deschise) iconițe/butoane de Editare (deschide modalul de cursă pre-completat, include câmpul staționare oprit) și Ștergere (dialog de confirmare); după operație reîncarcă ziua de la server
+   - Pe zile finalizate cursele rămân read-only, fără butoane
+
+Raportează ce ai găsit la punctul 2 (existau sau nu) și ce ai modificat.
