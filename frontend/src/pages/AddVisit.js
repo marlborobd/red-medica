@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getPatient, createVisit, getVisit, updateVisit, uploadPhoto } from '../services/api';
+import { getPatient, createVisit, getVisit, updateVisit, uploadPhoto, getIstoricPlati } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 
 const SERVICII_OPTIONS = [
@@ -33,6 +33,9 @@ export default function AddVisit() {
   const [poze, setPoze] = useState([]);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const fileInputRef = useRef(null);
+  const [istoricPlati, setIstoricPlati] = useState([]);
+  const [istoricTotal, setIstoricTotal] = useState(0);
+  const [loadingIstoric, setLoadingIstoric] = useState(true);
 
   const now = new Date();
   const todayStr = now.toISOString().split('T')[0];
@@ -43,13 +46,14 @@ export default function AddVisit() {
     perioada_tratament_inceput: '', perioada_tratament_sfarsit: '',
     zile_cass: '', servicii_efectuate: '', stare_pacient: '',
     medicamente: '', tensiune: '', temperatura: '',
-    observatii: '', suma_de_plata: '', suma_incasata: ''
+    observatii: '', suma_incasata: ''
   });
 
   useEffect(() => { loadData(); }, [patientId, visitId]);
 
   const loadData = async () => {
     setLoading(true);
+    setLoadingIstoric(true);
     try {
       const pRes = await getPatient(patientId);
       setPatient(pRes.data);
@@ -64,7 +68,7 @@ export default function AddVisit() {
           zile_cass: v.zile_cass || '', servicii_efectuate: v.servicii_efectuate || '',
           stare_pacient: v.stare_pacient || '', medicamente: v.medicamente || '',
           tensiune: v.tensiune || '', temperatura: v.temperatura || '',
-          observatii: v.observatii || '', suma_de_plata: v.suma_de_plata || '',
+          observatii: v.observatii || '',
           suma_incasata: v.suma_incasata || ''
         });
         try { setPoze(JSON.parse(v.poze || '[]')); } catch (_) { setPoze([]); }
@@ -74,6 +78,12 @@ export default function AddVisit() {
     } finally {
       setLoading(false);
     }
+    try {
+      const { data } = await getIstoricPlati(patientId);
+      setIstoricPlati(data.plati || []);
+      setIstoricTotal(data.total_incasat || 0);
+    } catch (_) {}
+    setLoadingIstoric(false);
   };
 
   const handleChange = (e) => {
@@ -118,14 +128,7 @@ export default function AddVisit() {
     setSaving(true);
     setError('');
     try {
-      const soldInitial = Number(patient?.sold_initial) || 0;
-      const soldRamas = Number(patient?.sold_ramas) || 0;
-      // Cazul 2: sold existent, suma_de_plata = sold_ramas (read-only în UI)
-      // Cazurile 1 și 3: utilizatorul a introdus suma_de_plata în form
-      const sumaDePlata = (soldInitial > 0 && soldRamas > 0)
-        ? soldRamas
-        : (Number(form.suma_de_plata) || 0);
-      const payload = { ...form, suma_de_plata: sumaDePlata, poze: JSON.stringify(poze) };
+      const payload = { ...form, suma_de_plata: 0, poze: JSON.stringify(poze) };
       if (isEdit) {
         await updateVisit(visitId, payload);
       } else {
@@ -359,77 +362,52 @@ export default function AddVisit() {
         <div className="card mb-3">
           <div className="card-header"><span className="card-title">💰 Plăți</span></div>
           <div className="card-body">
-            {(() => {
-              const soldInitial = Number(patient?.sold_initial) || 0;
-              const soldRamas = Number(patient?.sold_ramas) || 0;
-              const sumaIncasata = Number(form.suma_incasata) || 0;
+            <div className="form-group">
+              <label className="form-label">Sumă Încasată (lei)</label>
+              <input name="suma_incasata" type="number" step="0.01" min="0" className="form-control" placeholder="0.00" value={form.suma_incasata} onChange={handleChange} inputMode="decimal" />
+            </div>
+          </div>
+        </div>
 
-              // Cazul 1: sold_initial nu e setat — prima vizită sau fără sumă
-              if (soldInitial === 0) {
-                return (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                    <div className="form-group">
-                      <label className="form-label">Sumă De Plată (lei)</label>
-                      <input name="suma_de_plata" type="number" step="0.01" min="0" className="form-control" placeholder="0.00" value={form.suma_de_plata} onChange={handleChange} inputMode="decimal" />
-                    </div>
-                    <div className="form-group">
-                      <label className="form-label">Sumă Încasată (lei)</label>
-                      <input name="suma_incasata" type="number" step="0.01" min="0" className="form-control" placeholder="0.00" value={form.suma_incasata} onChange={handleChange} inputMode="decimal" />
-                    </div>
-                  </div>
-                );
-              }
-
-              // Cazul 3: sold_initial setat, sold_ramas = 0 — achitat complet, sumă nouă
-              if (soldRamas <= 0) {
-                return (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                    <div style={{ background: '#dcfce7', border: '1px solid #86efac', borderRadius: 8, padding: '10px 14px', color: '#15803d', fontWeight: 700, fontSize: 14 }}>
-                      ✓ Achitat complet
-                    </div>
-                    <div className="form-group">
-                      <label className="form-label">Sumă De Plată nouă (lei)</label>
-                      <input name="suma_de_plata" type="number" step="0.01" min="0" className="form-control" placeholder="0.00" value={form.suma_de_plata} onChange={handleChange} inputMode="decimal" />
-                    </div>
-                    <div className="form-group">
-                      <label className="form-label">Sumă Încasată (lei)</label>
-                      <input name="suma_incasata" type="number" step="0.01" min="0" className="form-control" placeholder="0.00" value={form.suma_incasata} onChange={handleChange} inputMode="decimal" />
-                    </div>
-                  </div>
-                );
-              }
-
-              // Cazul 2: sold_initial setat, sold_ramas > 0
-              const soldDupaPlata = soldRamas - sumaIncasata;
-              return (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                  <div className="form-group">
-                    <label className="form-label">Sold Rămas</label>
-                    <div style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '10px 14px', color: 'var(--danger)', fontWeight: 700, fontSize: 15 }}>
-                      Sold Rămas: {soldRamas.toLocaleString('ro-RO')} lei
-                    </div>
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">Sumă Încasată (lei)</label>
-                    <input name="suma_incasata" type="number" step="0.01" min="0" className="form-control" placeholder="0.00" value={form.suma_incasata} onChange={handleChange} inputMode="decimal" />
-                  </div>
-                  {sumaIncasata > 0 && (
-                    soldDupaPlata < 0 ? (
-                      <div style={{ background: '#fee2e2', border: '1px solid #fca5a5', borderRadius: 8, padding: '8px 12px', fontSize: 14, color: '#b91c1c', fontWeight: 700 }}>
-                        ⚠️ Suma introdusă depășește soldul rămas
-                      </div>
-                    ) : (
-                      <div style={{ background: soldDupaPlata === 0 ? '#dcfce7' : '#fef3c7', border: `1px solid ${soldDupaPlata === 0 ? '#86efac' : '#fcd34d'}`, borderRadius: 8, padding: '8px 12px', fontSize: 14 }}>
-                        <span style={{ color: 'var(--text-secondary)' }}>Sold după această plată: </span>
-                        <strong style={{ color: soldDupaPlata === 0 ? '#15803d' : '#b45309' }}>
-                          {soldDupaPlata.toLocaleString('ro-RO')} lei
-                        </strong>
-                      </div>
-                    )
-                  )}
+        {/* Istoric plăți */}
+        <div className="card mb-3">
+          <div className="card-header"><span className="card-title">📋 Istoric Plăți</span></div>
+          <div className="card-body">
+            {loadingIstoric ? (
+              <div style={{ color: 'var(--text-secondary)', fontSize: 13 }}>Se încarcă...</div>
+            ) : istoricPlati.length === 0 ? (
+              <div style={{ color: 'var(--text-secondary)', fontSize: 13 }}>Nicio plată înregistrată încă.</div>
+            ) : (
+              <>
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={{ fontSize: 13, width: '100%' }}>
+                    <thead>
+                      <tr>
+                        <th>Data</th>
+                        <th>Ora</th>
+                        <th style={{ textAlign: 'right' }}>Sumă (lei)</th>
+                        <th>Angajat</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {istoricPlati.map(p => (
+                        <tr key={p.id}>
+                          <td style={{ whiteSpace: 'nowrap' }}>{p.data_vizitei}</td>
+                          <td style={{ whiteSpace: 'nowrap' }}>{p.ora}</td>
+                          <td style={{ textAlign: 'right', fontWeight: 600, color: 'var(--secondary)', whiteSpace: 'nowrap' }}>
+                            {Number(p.suma_incasata).toLocaleString('ro-RO')}
+                          </td>
+                          <td>{p.angajat}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
-              );
-            })()}
+                <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid var(--border)', fontSize: 13, fontWeight: 700, textAlign: 'right' }}>
+                  Total încasat: <span style={{ color: 'var(--secondary)' }}>{Number(istoricTotal).toLocaleString('ro-RO')} lei</span>
+                </div>
+              </>
+            )}
           </div>
         </div>
       </div>

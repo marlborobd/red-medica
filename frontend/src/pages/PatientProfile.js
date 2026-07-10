@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getPatient, getVisits, deleteVisit, updatePatient, createScheduledVisit, getEmployees, setPatientSold, updateVisitPlata, deleteVisitPlata } from '../services/api';
+import { getPatient, getVisits, deleteVisit, updatePatient, createScheduledVisit, getEmployees, updateVisitPlata, deleteVisitPlata } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 
 function formatDate(d) {
@@ -52,8 +52,6 @@ export default function PatientProfile() {
   const [employees, setEmployees] = useState([]);
   const [scheduleSaving, setScheduleSaving] = useState(false);
   const [scheduleError, setScheduleError] = useState('');
-  const [soldInput, setSoldInput] = useState('');
-  const [soldSaving, setSoldSaving] = useState(false);
   const [editPlataVisit, setEditPlataVisit] = useState(null);
   const [editPlataInput, setEditPlataInput] = useState('');
   const [editPlataSaving, setEditPlataSaving] = useState(false);
@@ -247,27 +245,7 @@ export default function PatientProfile() {
   );
   if (!patient) return null;
 
-  const totalFacturat = visits.reduce((s, v) => s + (Number(v.suma_de_plata) || 0), 0);
   const totalIncasat = visits.reduce((s, v) => s + (Number(v.suma_incasata) || 0), 0);
-
-  const soldInitial = Number(patient?.sold_initial) || 0;
-  const soldRamas = Number(patient?.sold_ramas) || 0;
-  const soldEditable = soldRamas <= 0;
-
-  const handleSetSold = async () => {
-    if (!soldInput && soldInput !== 0) return;
-    setSoldSaving(true);
-    try {
-      await setPatientSold(id, soldInput);
-      showToast('Suma de plată a fost setată.');
-      loadData();
-      setSoldInput('');
-    } catch (err) {
-      showToast(err.response?.data?.error || 'Eroare la setare sold', 'error');
-    } finally {
-      setSoldSaving(false);
-    }
-  };
 
   return (
     <>
@@ -345,11 +323,10 @@ export default function PatientProfile() {
         </div>
 
         {/* Quick stats */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 20 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 20 }}>
           {[
             { label: 'Vizite', value: visits.length, icon: '📋' },
             { label: 'Ultima vizită', value: visits[0] ? formatDate(visits[0].data) : '—', icon: '📅' },
-            { label: 'Total facturat', value: `${totalFacturat.toLocaleString('ro-RO')} lei`, icon: '💳' },
             { label: 'Total încasat', value: `${totalIncasat.toLocaleString('ro-RO')} lei`, icon: '💰' }
           ].map(s => (
             <div key={s.label} style={{ background: 'var(--white)', borderRadius: 'var(--radius-lg)', padding: '14px 12px', textAlign: 'center', border: '1px solid var(--border)', boxShadow: 'var(--shadow)' }}>
@@ -410,14 +387,7 @@ export default function PatientProfile() {
                 <div className="card-body">
                   <div className="info-list">
                     <div className="info-row"><span className="info-label">Total Vizite</span><span className="info-value"><strong>{visits.length}</strong></span></div>
-                    <div className="info-row"><span className="info-label">Total Facturat</span><span className="info-value"><strong>{totalFacturat.toLocaleString('ro-RO')} lei</strong></span></div>
                     <div className="info-row"><span className="info-label">Total Încasat</span><span className="info-value" style={{ color: 'var(--secondary)', fontWeight: 700 }}>{totalIncasat.toLocaleString('ro-RO')} lei</span></div>
-                    <div className="info-row">
-                      <span className="info-label">Rest de Plată</span>
-                      <span className="info-value" style={{ color: totalFacturat - totalIncasat > 0 ? 'var(--danger)' : 'var(--secondary)', fontWeight: 700 }}>
-                        {(totalFacturat - totalIncasat).toLocaleString('ro-RO')} lei
-                      </span>
-                    </div>
                     <div className="info-row"><span className="info-label">Prima Vizită</span><span className="info-value">{visits.length > 0 ? formatDate(visits[visits.length - 1]?.data) : '—'}</span></div>
                     <div className="info-row"><span className="info-label">Ultima Vizită</span><span className="info-value">{visits[0] ? formatDate(visits[0].data) : '—'}</span></div>
                   </div>
@@ -429,56 +399,6 @@ export default function PatientProfile() {
                 </div>
               </div>
 
-              <div className="card">
-                <div className="card-header"><span className="card-title">💳 Plăți</span></div>
-                <div className="card-body">
-                  <div className="info-list" style={{ marginBottom: 16 }}>
-                    <div className="info-row">
-                      <span className="info-label">Sumă Inițială</span>
-                      <span className="info-value"><strong>{soldInitial.toLocaleString('ro-RO')} lei</strong></span>
-                    </div>
-                    <div className="info-row">
-                      <span className="info-label">Total Încasat</span>
-                      <span className="info-value" style={{ color: 'var(--secondary)', fontWeight: 700 }}>{totalIncasat.toLocaleString('ro-RO')} lei</span>
-                    </div>
-                    <div className="info-row">
-                      <span className="info-label">Sold Rămas</span>
-                      <span className="info-value" style={{ color: soldRamas <= 0 ? 'var(--secondary)' : 'var(--danger)', fontWeight: 700 }}>
-                        {soldRamas.toLocaleString('ro-RO')} lei
-                      </span>
-                    </div>
-                  </div>
-                  {soldRamas <= 0 && soldInitial > 0 && (
-                    <div style={{ background: '#dcfce7', border: '1px solid #86efac', borderRadius: 8, padding: '8px 12px', marginBottom: 14, color: '#15803d', fontWeight: 700, fontSize: 14 }}>
-                      ✓ Achitat complet
-                    </div>
-                  )}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                    <label className="form-label" style={{ marginBottom: 0 }}>Sumă De Plată (lei)</label>
-                    {soldEditable ? (
-                      <div style={{ display: 'flex', gap: 8 }}>
-                        <input
-                          type="number"
-                          step="0.01"
-                          min="0"
-                          className="form-control"
-                          placeholder="0.00"
-                          value={soldInput}
-                          onChange={e => setSoldInput(e.target.value)}
-                          inputMode="decimal"
-                        />
-                        <button className="btn btn-primary" onClick={handleSetSold} disabled={soldSaving || soldInput === ''} style={{ whiteSpace: 'nowrap' }}>
-                          {soldSaving ? 'Se salvează...' : 'Setează'}
-                        </button>
-                      </div>
-                    ) : (
-                      <div style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '10px 14px', fontSize: 14, color: 'var(--danger)', fontWeight: 700 }}>
-                        Sold rămas: {soldRamas.toLocaleString('ro-RO')} lei
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
             </div>
           </div>
         )}
@@ -605,7 +525,6 @@ export default function PatientProfile() {
                               )}
                               {v.servicii_efectuate && <div className="visit-detail" style={{ gridColumn: '1/-1' }}><span className="label">Servicii: </span><span className="value">{v.servicii_efectuate}</span></div>}
                               {v.observatii && <div className="visit-detail" style={{ gridColumn: '1/-1' }}><span className="label">Observații: </span><span className="value">{v.observatii}</span></div>}
-                              {Number(v.suma_de_plata) > 0 && <div className="visit-detail"><span className="label">Facturat: </span><span className="value">{Number(v.suma_de_plata).toLocaleString('ro-RO')} lei</span></div>}
                             </div>
 
                           </div>
@@ -864,12 +783,6 @@ export default function PatientProfile() {
             <div className="modal-body">
               <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                 <div className="form-group">
-                  <label className="form-label">Sumă De Plată</label>
-                  <div style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '10px 14px', fontSize: 14, color: 'var(--text)', fontWeight: 600 }}>
-                    {Number(editPlataVisit.suma_de_plata).toLocaleString('ro-RO')} lei
-                  </div>
-                </div>
-                <div className="form-group">
                   <label className="form-label">Sumă Încasată (lei) <span className="required">*</span></label>
                   <input
                     type="number"
@@ -908,7 +821,7 @@ export default function PatientProfile() {
                 <span>🗑️</span>
                 <div>
                   <strong>Ești sigur că vrei să ștergi plata de {Number(deletePlataVisit.suma_incasata).toLocaleString('ro-RO')} lei?</strong><br />
-                  <small>Suma va fi resetată la 0 și soldul pacientului va fi recalculat automat.</small>
+                  <small>Suma va fi resetată la 0.</small>
                 </div>
               </div>
             </div>

@@ -1,0 +1,22 @@
+Simplificăm complet sistemul de plăți la vizite. Principiu director: eliminăm din UI și din comportament conceptele de "sumă de plată" și "sold", dar NU ștergem nimic din schema DB (coloanele suma_de_plata, sold_initial, sold_ramas și helperul recalcSold rămân neatinse în backend — devin doar nefolosite). Nu modificăm rapoartele existente.
+
+Noul flux, singurul: la fiecare vizită, angajatul introduce opțional suma încasată. Atât.
+
+1. AddVisit.js — secțiunea Plăți:
+   - Un singur câmp: "Sumă Încasată (lei)", opțional, default gol/0
+   - Elimină complet: câmpul "Sumă De Plată", cele 3 cazuri condiționate de sold, afișarea soldului rămas și a soldului după plată. Fără nicio logică de sold în formular.
+   - La trimitere: suma_de_plata=0. NU modifica rutele backend de scriere.
+
+2. Endpoint nou de citire (singura modificare backend, aditivă): GET /api/patients/:id/istoric-plati — toate vizitele pacientului cu suma_incasata > 0, ordonate desc, cu { data_vizitei, ora, suma_incasata, angajat } + total_incasat. Protejat cu authenticate existent.
+
+3. AddVisit.js — sub secțiunea Plăți, secțiune nouă "Istoric plăți":
+   - Se încarcă la deschiderea formularului (vizită nouă sau editare)
+   - Tabel: Data | Ora | Suma (lei) | Angajat, cu total la final ("Total încasat: X lei")
+   - Fără plăți → "Nicio plată înregistrată încă"
+   - Stil consistent, mobil ok (scroll la liste lungi)
+
+4. PatientProfile.js — elimină din afișare sold_initial, sold_ramas și totalFacturat (rămân: total încasat + lista vizitelor cu sumele lor și butoanele existente de editare/resetare plată per vizită). Nu atinge altă logică din pagină.
+
+5. NU modifica: Reports.js, Dashboard.js, rutele de scriere din visits.js, patients.js (ruta /sold rămâne, doar nefolosită), scheduled-visits.js, database.js.
+
+La final: set CI=true&& npm run build în frontend, corectează doar warningurile din fișierele atinse, raportează punct cu punct.

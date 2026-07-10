@@ -264,4 +264,18 @@ router.delete('/:id', authenticate, requireAdmin, (req, res) => {
   res.json({ success: true });
 });
 
+// GET /:id/istoric-plati — vizite cu suma_incasata > 0, accesibil tuturor autentificaților
+router.get('/:id/istoric-plati', authenticate, (req, res) => {
+  const db = getDb();
+  const plati = db.prepare(`
+    SELECT v.id, v.data as data_vizitei, v.ora, v.suma_incasata, u.name as angajat
+    FROM visits v
+    LEFT JOIN users u ON v.angajat_id = u.id
+    WHERE v.patient_id = ? AND v.suma_incasata > 0
+    ORDER BY v.data DESC, v.ora DESC
+  `).all(req.params.id);
+  const total_incasat = plati.reduce((s, p) => s + (p.suma_incasata || 0), 0);
+  res.json({ plati, total_incasat });
+});
+
 module.exports = router;
