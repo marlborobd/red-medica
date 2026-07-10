@@ -37,6 +37,20 @@ function ensureHMS(t) {
   return t.split(':').length === 2 ? t + ':00' : t;
 }
 
+const ORA_RE = /^([01][0-9]|2[0-3]):[0-5][0-9]$/;
+
+function formatTimeInput(raw) {
+  const digits = raw.replace(/\D/g, '');
+  if (digits.length <= 2) return digits;
+  return digits.slice(0, 2) + ':' + digits.slice(2, 4);
+}
+
+function validateOra(val) {
+  if (!val) return 'Câmp obligatoriu.';
+  if (!ORA_RE.test(val)) return 'Format invalid (HH:MM, 24h).';
+  return '';
+}
+
 function calcViteza(km, sec) {
   const k = parseFloat(km);
   const s = Number(sec);
@@ -123,6 +137,7 @@ export default function AmbulantaActivitate() {
   const [editCursa, setEditCursa] = useState(null);
   const [cursaForm, setCursaForm] = useState({});
   const [cursaError, setCursaError] = useState('');
+  const [oraErrors, setOraErrors] = useState({ ora_plecare: '', ora_sosire: '' });
   const [savingCursa, setSavingCursa] = useState(false);
   const [calculandKm, setCalculandKm] = useState(false);
   const [googleDurata, setGoogleDurata] = useState(null);
@@ -319,10 +334,22 @@ export default function AmbulantaActivitate() {
 
   // ── Cursă: deschide modal ──────────────────────────────────────────────────
 
+  const handleOraChange = (field, raw) => {
+    const formatted = formatTimeInput(raw);
+    updateCursaField(field, formatted);
+    setOraErrors(prev => ({ ...prev, [field]: '' }));
+  };
+
+  const handleOraBlur = (field, val) => {
+    const err = validateOra(val);
+    setOraErrors(prev => ({ ...prev, [field]: err }));
+  };
+
   const openCursaModal = (editData = null) => {
     setEditCursa(editData);
     setCursaForm(initCursaForm(ziDetalii, ziDetalii?.curse, editData));
     setCursaError('');
+    setOraErrors({ ora_plecare: '', ora_sosire: '' });
     setGoogleDurata(null);
     setShowCursaModal(true);
   };
@@ -330,8 +357,11 @@ export default function AmbulantaActivitate() {
   // ── Cursă: salvare ─────────────────────────────────────────────────────────
 
   const handleSaveCursa = async () => {
-    if (!cursaForm.ora_plecare || !cursaForm.ora_sosire) {
-      setCursaError('Ora de plecare și ora de sosire sunt obligatorii.');
+    const pleErr = validateOra(cursaForm.ora_plecare);
+    const sosErr = validateOra(cursaForm.ora_sosire);
+    if (pleErr || sosErr) {
+      setOraErrors({ ora_plecare: pleErr, ora_sosire: sosErr });
+      setCursaError('Corectați orele înainte de salvare.');
       return;
     }
     if (!cursaForm.locatie_plecare?.trim() || !cursaForm.locatie_sosire?.trim()) {
@@ -538,28 +568,31 @@ export default function AmbulantaActivitate() {
                 {/* Rând zi */}
                 <div
                   onClick={() => handleToggleZi(zi.id)}
-                  style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}
+                  style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 20px', cursor: 'pointer' }}
                 >
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontWeight: 700, fontSize: 14 }}>{formatData(zi.data_activitate)}</div>
-                    <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <div style={{ fontWeight: 600, fontSize: 15, color: 'var(--text)', lineHeight: 1.3 }}>
+                      {formatData(zi.data_activitate)}
+                    </div>
+                    <div style={{
+                      fontSize: 13, color: 'var(--text-secondary)', marginTop: 3,
+                      overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'
+                    }}>
                       {zi.locatie_start}{zi.locatie_final ? ` → ${zi.locatie_final}` : ''}
+                      {totalKm !== null ? ` · ${totalKm} km` : ''}
                     </div>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-                    {totalKm !== null && (
-                      <span style={{ fontSize: 13, fontWeight: 600 }}>{totalKm} km</span>
-                    )}
                     <span className={`badge ${isFinalizata ? 'badge-green' : 'badge-blue'}`}>
                       {isFinalizata ? '✓ Finalizată' : '● Deschisă'}
                     </span>
-                    <span style={{ color: '#bbb', fontSize: 13 }}>{isOpen ? '▲' : '▼'}</span>
+                    <span style={{ color: '#bbb', fontSize: 13, lineHeight: 1 }}>{isOpen ? '▲' : '▼'}</span>
                   </div>
                 </div>
 
                 {/* Conținut expandat */}
                 {isOpen && (
-                  <div style={{ borderTop: '1px solid #f0f0f0', marginTop: 12, paddingTop: 12 }}>
+                  <div style={{ borderTop: '1px solid var(--border)', padding: '16px 20px 20px' }}>
                     {loadingZi ? (
                       <div className="loading"><div className="loading-spinner" />Se încarcă...</div>
                     ) : ziDetalii && (
@@ -716,13 +749,35 @@ export default function AmbulantaActivitate() {
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                   <div className="form-group">
                     <label className="form-label">Oră plecare <span className="required">*</span></label>
-                    <input type="time" className="form-control" value={cursaForm.ora_plecare}
-                      onChange={e => updateCursaField('ora_plecare', e.target.value)} />
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      className="form-control"
+                      value={cursaForm.ora_plecare}
+                      onChange={e => handleOraChange('ora_plecare', e.target.value)}
+                      onBlur={e => handleOraBlur('ora_plecare', e.target.value)}
+                      placeholder="HH:MM"
+                      maxLength={5}
+                    />
+                    {oraErrors.ora_plecare && (
+                      <div style={{ fontSize: 11, color: '#E53935', marginTop: 2 }}>{oraErrors.ora_plecare}</div>
+                    )}
                   </div>
                   <div className="form-group">
                     <label className="form-label">Oră sosire <span className="required">*</span></label>
-                    <input type="time" className="form-control" value={cursaForm.ora_sosire}
-                      onChange={e => updateCursaField('ora_sosire', e.target.value)} />
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      className="form-control"
+                      value={cursaForm.ora_sosire}
+                      onChange={e => handleOraChange('ora_sosire', e.target.value)}
+                      onBlur={e => handleOraBlur('ora_sosire', e.target.value)}
+                      placeholder="HH:MM"
+                      maxLength={5}
+                    />
+                    {oraErrors.ora_sosire && (
+                      <div style={{ fontSize: 11, color: '#E53935', marginTop: 2 }}>{oraErrors.ora_sosire}</div>
+                    )}
                   </div>
                 </div>
                 <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: -6 }}>

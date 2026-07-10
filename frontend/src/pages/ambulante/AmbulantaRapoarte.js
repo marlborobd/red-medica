@@ -138,63 +138,65 @@ export default function AmbulantaRapoarte() {
       <div className="page-body">
         {/* ── Filtre ── */}
         <div className="card" style={{ marginBottom: 16 }}>
-          <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 12 }}>Filtre</div>
+          <div style={{ padding: '16px 20px' }}>
+            <div style={{ fontWeight: 600, fontSize: 15, marginBottom: 12 }}>Filtre</div>
 
-          {error && <div className="alert alert-danger mb-2">{error}</div>}
+            {error && <div className="alert alert-danger mb-2">{error}</div>}
 
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 14, alignItems: 'flex-end' }}>
-            {/* Ambulanță */}
-            <div className="form-group" style={{ minWidth: 160, marginBottom: 0 }}>
-              <label className="form-label">Ambulanță</label>
-              <select className="form-control" value={ambulantaId} onChange={e => setAmbulantaId(e.target.value)}>
-                {ambulante.length === 0 && <option value="">—</option>}
-                {ambulante.map(a => (
-                  <option key={a.id} value={a.id}>{a.numar_inmatriculare}</option>
-                ))}
-              </select>
-            </div>
-
-            {/* Preseturi */}
-            <div className="form-group" style={{ marginBottom: 0 }}>
-              <label className="form-label">Perioadă</label>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                {Object.keys(PRESETURI).map(name => (
-                  <button
-                    key={name}
-                    className={`btn btn-sm ${preset === name ? 'btn-primary' : 'btn-ghost'}`}
-                    onClick={() => applyPreset(name)}
-                  >
-                    {name}
-                  </button>
-                ))}
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 14, alignItems: 'flex-end' }}>
+              {/* Ambulanță */}
+              <div className="form-group" style={{ minWidth: 160, marginBottom: 0 }}>
+                <label className="form-label">Ambulanță</label>
+                <select className="form-control" value={ambulantaId} onChange={e => setAmbulantaId(e.target.value)}>
+                  {ambulante.length === 0 && <option value="">—</option>}
+                  {ambulante.map(a => (
+                    <option key={a.id} value={a.id}>{a.numar_inmatriculare}</option>
+                  ))}
+                </select>
               </div>
-            </div>
 
-            {/* Date custom */}
-            <div className="form-group" style={{ marginBottom: 0 }}>
-              <label className="form-label">De la</label>
-              <input type="date" className="form-control" value={deLa}
-                onChange={e => { setDeLa(e.target.value); setPreset('Custom'); }} />
-            </div>
-            <div className="form-group" style={{ marginBottom: 0 }}>
-              <label className="form-label">Până la</label>
-              <input type="date" className="form-control" value={panaLa}
-                onChange={e => { setPanaLa(e.target.value); setPreset('Custom'); }} />
-            </div>
+              {/* Preseturi */}
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label className="form-label">Perioadă</label>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                  {Object.keys(PRESETURI).map(name => (
+                    <button
+                      key={name}
+                      className={`btn btn-sm ${preset === name ? 'btn-primary' : 'btn-ghost'}`}
+                      onClick={() => applyPreset(name)}
+                    >
+                      {name}
+                    </button>
+                  ))}
+                </div>
+              </div>
 
-            {/* Include deschise */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, paddingBottom: 2 }}>
-              <input type="checkbox" id="incl-deschise" checked={includeDeschise}
-                onChange={e => setIncludeDeschise(e.target.checked)} style={{ width: 16, height: 16 }} />
-              <label htmlFor="incl-deschise" style={{ fontSize: 13, cursor: 'pointer', margin: 0 }}>
-                Include zilele nefinalizate
-              </label>
-            </div>
+              {/* Date custom */}
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label className="form-label">De la</label>
+                <input type="date" className="form-control" value={deLa}
+                  onChange={e => { setDeLa(e.target.value); setPreset('Custom'); }} />
+              </div>
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label className="form-label">Până la</label>
+                <input type="date" className="form-control" value={panaLa}
+                  onChange={e => { setPanaLa(e.target.value); setPreset('Custom'); }} />
+              </div>
 
-            <button className="btn btn-primary" onClick={handleAfiseaza} disabled={loading}
-              style={{ alignSelf: 'flex-end' }}>
-              {loading ? 'Se încarcă...' : '🔍 Afișează'}
-            </button>
+              {/* Include deschise */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, paddingBottom: 2 }}>
+                <input type="checkbox" id="incl-deschise" checked={includeDeschise}
+                  onChange={e => setIncludeDeschise(e.target.checked)} style={{ width: 16, height: 16 }} />
+                <label htmlFor="incl-deschise" style={{ fontSize: 13, cursor: 'pointer', margin: 0 }}>
+                  Include zilele nefinalizate
+                </label>
+              </div>
+
+              <button className="btn btn-primary" onClick={handleAfiseaza} disabled={loading}
+                style={{ alignSelf: 'flex-end' }}>
+                {loading ? 'Se încarcă...' : '🔍 Afișează'}
+              </button>
+            </div>
           </div>
         </div>
 
@@ -203,11 +205,11 @@ export default function AmbulantaRapoarte() {
           <>
             {/* Sumar perioadă */}
             <div className="card" style={{ marginBottom: 12 }}>
-              <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 10 }}>
+              <div style={{ padding: '14px 20px 10px', fontWeight: 600, fontSize: 15 }}>
                 Sumar perioadă — {raport.ambulanta.numar_inmatriculare} ({raport.perioada.de_la} → {raport.perioada.pana_la})
               </div>
               {raport.sumar_perioada ? (
-                <div style={{ overflowX: 'auto' }}>
+                <div style={{ overflowX: 'auto', paddingBottom: 4 }}>
                   <table style={{ fontSize: 12, minWidth: 700 }}>
                     <thead>
                       <tr>
@@ -237,15 +239,15 @@ export default function AmbulantaRapoarte() {
                   </table>
                 </div>
               ) : (
-                <div style={{ color: 'var(--text-secondary)', fontSize: 13 }}>Nu există date pentru această perioadă.</div>
+                <div style={{ padding: '0 20px 16px', color: 'var(--text-secondary)', fontSize: 13 }}>Nu există date pentru această perioadă.</div>
               )}
             </div>
 
             {/* Sumar per zi */}
             {raport.zile.length > 0 && (
               <div className="card" style={{ marginBottom: 12 }}>
-                <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 10 }}>Sumar pe zile</div>
-                <div style={{ overflowX: 'auto' }}>
+                <div style={{ padding: '14px 20px 10px', fontWeight: 600, fontSize: 15 }}>Sumar pe zile</div>
+                <div style={{ overflowX: 'auto', paddingBottom: 4 }}>
                   <table style={{ fontSize: 12, minWidth: 700 }}>
                     <thead>
                       <tr>
@@ -285,10 +287,10 @@ export default function AmbulantaRapoarte() {
             {/* Detalii curse */}
             {toateCursele.length > 0 && (
               <div className="card">
-                <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 10 }}>
+                <div style={{ padding: '14px 20px 10px', fontWeight: 600, fontSize: 15 }}>
                   Detalii călătorii ({toateCursele.length} curse)
                 </div>
-                <div style={{ overflowX: 'auto' }}>
+                <div style={{ overflowX: 'auto', paddingBottom: 4 }}>
                   <table style={{ fontSize: 11, minWidth: 900 }}>
                     <thead>
                       <tr>
@@ -326,7 +328,7 @@ export default function AmbulantaRapoarte() {
             )}
 
             {raport.zile.length === 0 && (
-              <div className="card" style={{ padding: '24px 16px', textAlign: 'center', color: 'var(--text-secondary)' }}>
+              <div className="card" style={{ padding: '24px 20px', textAlign: 'center', color: 'var(--text-secondary)' }}>
                 Nu există zile de activitate finalizate în perioada selectată.
               </div>
             )}
