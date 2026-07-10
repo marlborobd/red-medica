@@ -188,14 +188,9 @@ export default function Reports() {
                 { label: 'Angajați Activi', value: summary?.totalEmployees, icon: '👤', color: 'purple' },
                 { label: 'Vizite Luna Aceasta', value: summary?.visitsThisMonth, icon: '📅', color: 'orange' },
                 { label: 'Pacienți Noi Luna Aceasta', value: summary?.patientsThisMonth, icon: '🆕', color: 'teal' },
-                { label: 'Total Facturat', value: formatMoney(summary?.revenue), icon: '💳', color: 'blue' },
+                { label: 'Încasat Astăzi', value: formatMoney(summary?.incasat_azi), icon: '💵', color: 'green' },
                 { label: 'Total Încasat', value: formatMoney(summary?.incasat), icon: '💰', color: 'green' },
-                {
-                  label: 'Rest de Încasat',
-                  value: formatMoney((summary?.revenue || 0) - (summary?.incasat || 0)),
-                  icon: '⚠️',
-                  color: 'orange'
-                }
+                { label: 'Încasat Luna Aceasta', value: formatMoney(summary?.incasat_luna), icon: '📅', color: 'teal' }
               ].map(s => (
                 <div key={s.label} className="stat-card">
                   <div className={`stat-icon ${s.color}`}>{s.icon}</div>

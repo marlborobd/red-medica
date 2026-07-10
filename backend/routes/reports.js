@@ -19,11 +19,18 @@ router.get('/summary', (req, res) => {
     SELECT COUNT(*) as count FROM patients
     WHERE strftime('%Y-%m', data_inregistrare) = strftime('%Y-%m', 'now')
   `).get().count;
+  const incasat_azi = db.prepare(
+    "SELECT COALESCE(SUM(suma_incasata),0) as total FROM visits WHERE data = date('now','localtime')"
+  ).get().total;
+  const incasat_luna = db.prepare(
+    "SELECT COALESCE(SUM(suma_incasata),0) as total FROM visits WHERE strftime('%Y-%m', data) = strftime('%Y-%m', date('now','localtime'))"
+  ).get().total;
 
   res.json({
     totalPatients, totalVisits, totalEmployees,
     revenue: revenue.total, incasat: revenue.incasat,
-    visitsThisMonth, patientsThisMonth
+    visitsThisMonth, patientsThisMonth,
+    incasat_azi, incasat_luna
   });
 });
 
