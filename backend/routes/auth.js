@@ -57,16 +57,25 @@ router.post('/users', authenticate, requireAdmin, (req, res) => {
   if (!email || !password || !name) {
     return res.status(400).json({ error: 'Email, parolă și nume sunt obligatorii' });
   }
-  const db = getDb();
-  const existing = db.prepare('SELECT id FROM users WHERE email = ?').get(email);
-  if (existing) {
-    return res.status(400).json({ error: 'Email-ul există deja' });
+  const VALID_ROLES = ['admin', 'employee', 'ambulanta'];
+  const finalRole = role || 'employee';
+  if (!VALID_ROLES.includes(finalRole)) {
+    return res.status(400).json({ error: `Rol invalid. Valori acceptate: ${VALID_ROLES.join(', ')}` });
   }
-  const hashed = bcrypt.hashSync(password, 10);
-  const result = db.prepare(
-    'INSERT INTO users (email, password, name, role) VALUES (?, ?, ?, ?)'
-  ).run(email, hashed, name, role || 'employee');
-  res.status(201).json({ id: result.lastInsertRowid, email, name, role: role || 'employee' });
+  try {
+    const db = getDb();
+    const existing = db.prepare('SELECT id FROM users WHERE email = ?').get(email);
+    if (existing) {
+      return res.status(400).json({ error: 'Email-ul există deja' });
+    }
+    const hashed = bcrypt.hashSync(password, 10);
+    const result = db.prepare(
+      'INSERT INTO users (email, password, name, role) VALUES (?, ?, ?, ?)'
+    ).run(email, hashed, name, finalRole);
+    res.status(201).json({ id: result.lastInsertRowid, email, name, role: finalRole });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
 });
 
 router.put('/users/:id', authenticate, requireAdmin, (req, res) => {

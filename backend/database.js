@@ -287,6 +287,67 @@ function migrateAmbulante() {
   }
 }
 
+// ===== Migrare: extinde CHECK role cu 'ambulanta' =====
+function migrateUsersRoleConstraint() {
+  try {
+    const stmt = sqlJsDb.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='users'");
+    let realSql = null;
+    if (stmt.step()) realSql = stmt.getAsObject().sql;
+    stmt.free();
+
+    if (!realSql) return;
+    if (realSql.includes("'ambulanta'")) return; // deja migrat
+
+    // Construiește users_v2 pornind de la schema reală, înlocuind DOAR textul CHECK-ului
+    const v2Sql = realSql
+      .replace(
+        /CHECK\s*\(\s*role\s+IN\s*\([^)]*\)\s*\)/i,
+        "CHECK(role IN ('admin', 'employee', 'ambulanta'))"
+      )
+      .replace(/\bCREATE TABLE\s+(IF NOT EXISTS\s+)?users\b/i, 'CREATE TABLE users_v2');
+
+    // Citește coloanele reale cu PRAGMA
+    const colStmt = sqlJsDb.prepare('PRAGMA table_info(users)');
+    const cols = [];
+    while (colStmt.step()) cols.push(colStmt.getAsObject().name);
+    colStmt.free();
+    if (cols.length === 0) return;
+
+    const colList = cols.join(', ');
+
+    // Numărul de rânduri înainte
+    const countStmt = sqlJsDb.prepare('SELECT COUNT(*) as n FROM users');
+    countStmt.step();
+    const countBefore = countStmt.getAsObject().n;
+    countStmt.free();
+
+    sqlJsDb.run('PRAGMA foreign_keys=OFF');
+    sqlJsDb.exec(v2Sql);
+    sqlJsDb.exec(`INSERT INTO users_v2 (${colList}) SELECT ${colList} FROM users`);
+    sqlJsDb.exec('DROP TABLE users');
+    sqlJsDb.exec('ALTER TABLE users_v2 RENAME TO users');
+    sqlJsDb.run('PRAGMA foreign_keys=ON');
+
+    // Verificare integritate
+    const countStmt2 = sqlJsDb.prepare('SELECT COUNT(*) as n FROM users');
+    countStmt2.step();
+    const countAfter = countStmt2.getAsObject().n;
+    countStmt2.free();
+
+    if (countAfter !== countBefore) {
+      throw new Error(
+        `[Migration users role] INTEGRITATE COMPROMISĂ: ${countBefore} useri înainte, ${countAfter} după. DB NU a fost salvat.`
+      );
+    }
+
+    saveDb();
+    console.log(`✓ Migration: role constraint actualizat (+ ambulanta), ${countAfter} useri verificați`);
+  } catch (err) {
+    console.error('[Migration users role]', err.message);
+    throw err;
+  }
+}
+
 // ===== Migrare: creare tabele foi_parcurs și setari_angajat =====
 function migrateFoiParcurs() {
   try {
@@ -346,7 +407,7 @@ async function initDatabase() {
       email TEXT UNIQUE NOT NULL,
       password TEXT NOT NULL,
       name TEXT NOT NULL,
-      role TEXT DEFAULT 'employee' CHECK(role IN ('admin', 'employee')),
+      role TEXT DEFAULT 'employee' CHECK(role IN ('admin', 'employee', 'ambulanta')),
       active INTEGER DEFAULT 1,
       created_at TEXT DEFAULT (datetime('now', 'localtime'))
     );
@@ -513,6 +574,7 @@ async function initDatabase() {
   migrateFoiParcurs();
   migrateAmbulante();
   migrateVitezaMedieSursa();
+  migrateUsersRoleConstraint();
 
   // Admin
   const adminEmail = process.env.ADMIN_EMAIL || 'admin@asistenta.ro';
