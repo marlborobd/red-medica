@@ -234,31 +234,26 @@ export default function Reports() {
                 <div className="table-wrapper mt-2">
                   <table>
                     <thead>
-                      <tr><th>Lună</th><th>Vizite</th><th>Total Facturat</th><th>Total Încasat</th><th>Rest</th></tr>
+                      <tr><th>Lună</th><th>Vizite</th><th>Total Încasat</th></tr>
                     </thead>
                     <tbody>
                       {MONTHS.map((month, idx) => {
                         const d = monthly.find(m => parseInt(m.luna) === idx + 1);
                         if (!d) return (
-                          <tr key={month}><td>{month}</td><td style={{ color: 'var(--text-secondary)' }}>0</td><td>—</td><td>—</td><td>—</td></tr>
+                          <tr key={month}><td>{month}</td><td style={{ color: 'var(--text-secondary)' }}>0</td><td>—</td></tr>
                         );
-                        const rest = (d.total_plata || 0) - (d.total_incasat || 0);
                         return (
                           <tr key={month}>
                             <td><strong>{month}</strong></td>
                             <td><span className="badge badge-blue">{d.vizite}</span></td>
-                            <td>{formatMoney(d.total_plata)}</td>
                             <td style={{ color: 'var(--secondary)', fontWeight: 600 }}>{formatMoney(d.total_incasat)}</td>
-                            <td style={{ color: rest > 0 ? 'var(--danger)' : 'var(--secondary)' }}>{formatMoney(rest)}</td>
                           </tr>
                         );
                       })}
                       <tr style={{ background: 'var(--primary-light)', fontWeight: 700 }}>
                         <td>TOTAL</td>
                         <td>{monthly.reduce((s, m) => s + m.vizite, 0)}</td>
-                        <td>{formatMoney(monthly.reduce((s, m) => s + (m.total_plata || 0), 0))}</td>
                         <td style={{ color: 'var(--secondary)' }}>{formatMoney(monthly.reduce((s, m) => s + (m.total_incasat || 0), 0))}</td>
-                        <td style={{ color: 'var(--danger)' }}>{formatMoney(monthly.reduce((s, m) => s + (m.total_plata || 0) - (m.total_incasat || 0), 0))}</td>
                       </tr>
                     </tbody>
                   </table>
@@ -276,7 +271,7 @@ export default function Reports() {
               <div className="table-wrapper">
                 <table>
                   <thead>
-                    <tr><th>Angajat</th><th>Rol</th><th>Pacienți</th><th>Vizite</th><th>Total Facturat</th><th>Total Încasat</th></tr>
+                    <tr><th>Angajat</th><th>Rol</th><th>Pacienți</th><th>Vizite</th><th>Total Încasat</th></tr>
                   </thead>
                   <tbody>
                     {employees.map(e => (
@@ -285,7 +280,6 @@ export default function Reports() {
                         <td><span className={`badge ${e.role === 'admin' ? 'badge-purple' : 'badge-blue'}`}>{e.role === 'admin' ? 'Admin' : 'Angajat'}</span></td>
                         <td>{e.pacienti}</td>
                         <td><strong>{e.vizite}</strong></td>
-                        <td>{formatMoney(e.total_plata)}</td>
                         <td style={{ color: 'var(--secondary)', fontWeight: 600 }}>{formatMoney(e.total_incasat)}</td>
                       </tr>
                     ))}
@@ -335,7 +329,6 @@ export default function Reports() {
                 <span className="card-title">📋 Vizite ({visits.length})</span>
                 {visits.length > 0 && (
                   <div style={{ display: 'flex', gap: 16, fontSize: 13 }}>
-                    <span>Total facturat: <strong style={{ color: 'var(--primary)' }}>{formatMoney(visits.reduce((s, v) => s + (v.suma_de_plata || 0), 0))}</strong></span>
                     <span>Total încasat: <strong style={{ color: 'var(--secondary)' }}>{formatMoney(visits.reduce((s, v) => s + (v.suma_incasata || 0), 0))}</strong></span>
                   </div>
                 )}
@@ -351,7 +344,7 @@ export default function Reports() {
                 <div className="table-wrapper">
                   <table>
                     <thead>
-                      <tr><th>Data</th><th>Pacient</th><th>CNP</th><th>Angajat</th><th>Diagnostic</th><th>Stare</th><th>Tensiune</th><th>Temp.</th><th>Facturat</th><th>Încasat</th></tr>
+                      <tr><th>Data</th><th>Pacient</th><th>CNP</th><th>Angajat</th><th>Diagnostic</th><th>Stare</th><th>Tensiune</th><th>Temp.</th><th>Încasat</th></tr>
                     </thead>
                     <tbody>
                       {visits.map(v => (
@@ -364,7 +357,6 @@ export default function Reports() {
                           <td>{v.stare_pacient ? <span className="badge badge-blue">{v.stare_pacient}</span> : '-'}</td>
                           <td>{v.tensiune || '-'}</td>
                           <td>{v.temperatura ? `${v.temperatura}°C` : '-'}</td>
-                          <td>{v.suma_de_plata > 0 ? formatMoney(v.suma_de_plata) : '-'}</td>
                           <td style={{ color: 'var(--secondary)', fontWeight: 600 }}>{v.suma_incasata > 0 ? formatMoney(v.suma_incasata) : '-'}</td>
                         </tr>
                       ))}
