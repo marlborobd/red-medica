@@ -312,16 +312,55 @@ router.post('/zile/:id/finalizare', requireAmbAccess, (req, res) => {
   }
 });
 
-// POST /api/amb/zile/:id/redeschidere  (admin only)
-router.post('/zile/:id/redeschidere', authenticate, requireAdmin, (req, res) => {
+// POST /api/amb/ambulante
+router.post('/ambulante', authenticate, requireAdmin, (req, res) => {
   try {
     const db = getDb();
-    const zi = db.prepare('SELECT * FROM amb_zile WHERE id = ?').get(req.params.id);
-    if (!zi) return res.status(404).json({ error: 'Ziua nu a fost găsită.' });
-    if (zi.status !== 'finalizata') return res.status(400).json({ error: 'Ziua nu este finalizată.' });
+    const nr = (req.body.numar_inmatriculare || '').toUpperCase().trim();
+    const err = validateNr(nr);
+    if (err) return res.status(400).json({ error: err });
 
-    db.prepare("UPDATE amb_zile SET status='deschisa', updated_at=datetime('now') WHERE id=?").run(req.params.id);
-    res.json(db.prepare('SELECT * FROM amb_zile WHERE id = ?').get(req.params.id));
+    const odometru = parseFloat(req.body.odometru_curent) || 0;
+    if (odometru < 0) return res.status(400).json({ error: 'Odometrul nu poate fi negativ.' });
+
+    // Verifică dacă există deja o ambulanță inactivă cu același număr
+    const existingInactiva = db.prepare(
+      'SELECT * FROM amb_ambulante WHERE numar_inmatriculare = ? AND activ = 0'
+    ).get(nr);
+
+    if (existingInactiva) {
+      // Reactivează în loc să insereze
+      db.prepare(
+        "UPDATE amb_ambulante SET activ=1, odometru_curent=?, updated_at=datetime('now') WHERE id=?"
+      ).run(odometru, existingInactiva.id);
+      return res.status(201).json(
+        db.prepare('SELECT * FROM amb_ambulante WHERE id = ?').get(existingInactiva.id)
+      );
+    }
+
+    // Verifică dacă există deja activă
+    const existingActiva = db.prepare(
+      'SELECT * FROM amb_ambulante WHERE numar_inmatriculare = ? AND activ = 1'
+    ).get(nr);
+    if (existingActiva) {
+      return res.status(409).json({ error: `Ambulanța ${nr} există deja și este activă.` });
+    }
+
+    let result;
+    try {
+      result = db.prepare(
+        'INSERT INTO amb_ambulante (numar_inmatriculare, odometru_curent) VALUES (?, ?)'
+      ).run(nr, odometru);
+    } catch (e) {
+      if (e.message && e.message.includes('UNIQUE')) {
+        return res.status(409).json({ error: `Ambulanța ${nr} există deja.` });
+      }
+      throw e;
+    }
+
+    res.status(201).json(
+      db.prepare('SELECT * FROM amb_ambulante WHERE id = ?').get(result.lastInsertRowid)
+    );
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
