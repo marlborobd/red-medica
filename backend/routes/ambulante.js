@@ -163,8 +163,8 @@ router.delete('/ambulante/:id', authenticate, requireAdmin, (req, res) => {
       return res.status(409).json({ error: 'Ambulanța are o zi de activitate deschisă. Finalizați ziua înainte de dezactivare.' });
     }
 
-    db.prepare("UPDATE amb_ambulante SET activ=0, updated_at=datetime('now') WHERE id=?").run(req.params.id);
-    res.json({ success: true, message: `Ambulanța ${existing.numar_inmatriculare} a fost dezactivată.` });
+    db.prepare('DELETE FROM amb_ambulante WHERE id=?').run(req.params.id);
+    res.json({ success: true, message: `Ambulanța ${existing.numar_inmatriculare} a fost ștearsă.` });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
