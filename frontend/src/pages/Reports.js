@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { getReportSummary, getReportMonthly, getReportEmployees, getVisitsDetail, getUsers, triggerManualBackup, triggerBackupManual, getBackupStatus } from '../services/api';
+import BackupReminder from '../components/BackupReminder';
+
+const BACKUP_REMINDER_DAYS = 15;
 
 const MONTHS = ['Ian', 'Feb', 'Mar', 'Apr', 'Mai', 'Iun', 'Iul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
@@ -25,11 +28,20 @@ export default function Reports() {
   const [lastBackupAt, setLastBackupAt] = useState(null);
   const [backupSectionLoading, setBackupSectionLoading] = useState(false);
   const [backupSectionMsg, setBackupSectionMsg] = useState(null);
+  const [showBackupReminder, setShowBackupReminder] = useState(false);
 
   useEffect(() => {
     loadMain();
     loadUsers();
     getBackupStatus().then(r => { if (r.data.lastBackupAt) setLastBackupAt(r.data.lastBackupAt); }).catch(() => {});
+
+    const lastBackupDate = localStorage.getItem('lastBackupDate');
+    if (!lastBackupDate) {
+      setShowBackupReminder(true);
+    } else {
+      const zileTrecute = (Date.now() - new Date(lastBackupDate).getTime()) / (1000 * 60 * 60 * 24);
+      if (zileTrecute > BACKUP_REMINDER_DAYS) setShowBackupReminder(true);
+    }
   }, []);
 
   useEffect(() => { loadMonthly(); }, [year]);
@@ -76,6 +88,8 @@ export default function Reports() {
       await triggerManualBackup();
       const now = new Date().toISOString();
       setLastBackupAt(now);
+      localStorage.setItem('lastBackupDate', now);
+      setShowBackupReminder(false);
       setBackupMsg({ ok: true, text: 'Backup reușit!' });
     } catch (err) {
       setBackupMsg({ ok: false, text: err.response?.data?.message || 'Eroare la backup' });
@@ -117,6 +131,8 @@ export default function Reports() {
       await triggerBackupManual();
       const now = new Date().toISOString();
       setLastBackupAt(now);
+      localStorage.setItem('lastBackupDate', now);
+      setShowBackupReminder(false);
       setBackupSectionMsg({ ok: true, text: 'Backup creat cu succes!' });
     } catch (err) {
       setBackupSectionMsg({ ok: false, text: err.response?.data?.message || err.response?.data?.error || 'Eroare la backup' });
@@ -443,6 +459,15 @@ export default function Reports() {
           </div>
         </div>
       </div>
+
+      {showBackupReminder && (
+        <BackupReminder
+          lastBackupAt={lastBackupAt}
+          loading={backupLoading}
+          onBackup={handleManualBackup}
+          onDismiss={() => setShowBackupReminder(false)}
+        />
+      )}
     </>
   );
 }

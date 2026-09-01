@@ -197,6 +197,132 @@ async function runBackup() {
     applyRowStyle(row, i + 1);
   });
 
+  // ===== Foaia Ambulante =====
+  const shAmbulante = workbook.addWorksheet('Ambulante');
+  shAmbulante.columns = [
+    { header: 'ID',                      key: 'id',                width: 8  },
+    { header: 'Numar inmatriculare',     key: 'numar_inmatriculare', width: 20 },
+    { header: 'Odometru curent (km)',    key: 'odometru_curent',   width: 20 },
+    { header: 'Activ',                   key: 'activ',             width: 10 },
+    { header: 'Data adaugare',           key: 'data_adaugare',     width: 20 },
+  ];
+  applyHeaderStyle(shAmbulante.getRow(1));
+
+  const ambulante = db.prepare('SELECT * FROM amb_ambulante ORDER BY numar_inmatriculare').all();
+  ambulante.forEach((a, i) => {
+    const row = shAmbulante.addRow({
+      id:                  a.id,
+      numar_inmatriculare: a.numar_inmatriculare,
+      odometru_curent:     a.odometru_curent,
+      activ:               a.activ ? 'Da' : 'Nu',
+      data_adaugare:       a.created_at || '',
+    });
+    applyRowStyle(row, i + 1);
+  });
+
+  // ===== Foaia Zile ambulanta =====
+  const shZileAmb = workbook.addWorksheet('Zile ambulanta');
+  shZileAmb.columns = [
+    { header: 'ID',              key: 'id',              width: 8  },
+    { header: 'Ambulanta',       key: 'ambulanta',       width: 18 },
+    { header: 'Data activitate', key: 'data_activitate', width: 16 },
+    { header: 'Locatie start',   key: 'locatie_start',   width: 30 },
+    { header: 'Locatie final',   key: 'locatie_final',   width: 30 },
+    { header: 'Odometru start',  key: 'odometru_start',  width: 16 },
+    { header: 'Odometru final',  key: 'odometru_final',  width: 16 },
+    { header: 'Status',          key: 'status',          width: 14 },
+    { header: 'Total curse',     key: 'total_curse',     width: 13 },
+  ];
+  applyHeaderStyle(shZileAmb.getRow(1));
+
+  const zileAmb = db.prepare(`
+    SELECT z.*, a.numar_inmatriculare,
+      (SELECT COUNT(*) FROM amb_curse WHERE zi_id = z.id) AS total_curse
+    FROM amb_zile z
+    JOIN amb_ambulante a ON z.ambulanta_id = a.id
+    ORDER BY z.data_activitate DESC
+  `).all();
+  zileAmb.forEach((z, i) => {
+    const row = shZileAmb.addRow({
+      id:              z.id,
+      ambulanta:       z.numar_inmatriculare,
+      data_activitate: z.data_activitate || '',
+      locatie_start:   z.locatie_start || '',
+      locatie_final:   z.locatie_final || '',
+      odometru_start:  z.odometru_start,
+      odometru_final:  z.odometru_final,
+      status:          z.status === 'finalizata' ? 'Finalizată' : 'Deschisă',
+      total_curse:     z.total_curse,
+    });
+    applyRowStyle(row, i + 1);
+  });
+
+  // ===== Foaia Curse ambulanta =====
+  const shCurseAmb = workbook.addWorksheet('Curse ambulanta');
+  shCurseAmb.columns = [
+    { header: 'ID',              key: 'id',              width: 8  },
+    { header: 'Ambulanta',       key: 'ambulanta',       width: 18 },
+    { header: 'Data',            key: 'data',            width: 14 },
+    { header: 'Ordine',          key: 'ordine',          width: 10 },
+    { header: 'Ora plecare',     key: 'ora_plecare',     width: 13 },
+    { header: 'Ora sosire',      key: 'ora_sosire',      width: 13 },
+    { header: 'Locatie plecare', key: 'locatie_plecare', width: 30 },
+    { header: 'Locatie sosire',  key: 'locatie_sosire',  width: 30 },
+    { header: 'Distanta km',     key: 'distanta_km',     width: 14 },
+    { header: 'Odometru start',  key: 'odometru_start',  width: 16 },
+    { header: 'Odometru final',  key: 'odometru_final',  width: 16 },
+    { header: 'Durata (ore)',    key: 'durata_ore',      width: 14 },
+    { header: 'Viteza medie',    key: 'viteza_medie',    width: 14 },
+    { header: 'Viteza maxima',   key: 'viteza_maxima',   width: 14 },
+  ];
+  applyHeaderStyle(shCurseAmb.getRow(1));
+
+  const curseAmb = db.prepare(`
+    SELECT c.*, z.data_activitate, a.numar_inmatriculare
+    FROM amb_curse c
+    JOIN amb_zile z ON c.zi_id = z.id
+    JOIN amb_ambulante a ON z.ambulanta_id = a.id
+    ORDER BY z.data_activitate DESC, c.ordine
+  `).all();
+  curseAmb.forEach((c, i) => {
+    const row = shCurseAmb.addRow({
+      id:              c.id,
+      ambulanta:       c.numar_inmatriculare,
+      data:            c.data_activitate || c.data_cursa || '',
+      ordine:          c.ordine,
+      ora_plecare:     c.ora_plecare || '',
+      ora_sosire:      c.ora_sosire || '',
+      locatie_plecare: c.locatie_plecare || '',
+      locatie_sosire:  c.locatie_sosire || '',
+      distanta_km:     c.distanta_km,
+      odometru_start:  c.odometru_start,
+      odometru_final:  c.odometru_final,
+      durata_ore:      c.durata_condus_sec != null ? Math.round((c.durata_condus_sec / 3600) * 100) / 100 : '',
+      viteza_medie:    c.viteza_medie ?? '',
+      viteza_maxima:   c.viteza_maxima ?? '',
+    });
+    applyRowStyle(row, i + 1);
+  });
+
+  // ===== Foaia Adrese frecvente =====
+  const shAdrese = workbook.addWorksheet('Adrese frecvente');
+  shAdrese.columns = [
+    { header: 'Adresa',           key: 'adresa',           width: 40 },
+    { header: 'Utilizari',        key: 'utilizari',        width: 13 },
+    { header: 'Ultima utilizare', key: 'ultima_utilizare', width: 20 },
+  ];
+  applyHeaderStyle(shAdrese.getRow(1));
+
+  const adreseFrecvente = db.prepare('SELECT * FROM amb_adrese_frecvente ORDER BY utilizari DESC').all();
+  adreseFrecvente.forEach((r, i) => {
+    const row = shAdrese.addRow({
+      adresa:           r.adresa,
+      utilizari:        r.utilizari,
+      ultima_utilizare: r.ultima_utilizare || '',
+    });
+    applyRowStyle(row, i + 1);
+  });
+
   // Salvează fișierul (suprascrie același fișier)
   await workbook.xlsx.writeFile(BACKUP_FILE);
 
@@ -205,7 +331,7 @@ async function runBackup() {
   lastBackupFile = BACKUP_FILE;
   fs.writeFileSync(LAST_BACKUP_FILE, JSON.stringify({ lastBackupAt, lastBackupFile: BACKUP_FILE }, null, 2));
 
-  console.log(`✓ [Backup] ${BACKUP_FILE} actualizat — ${pacienti.length} pacienți, ${vizite.length} vizite, ${angajati.length} angajați`);
+  console.log(`✓ [Backup] ${BACKUP_FILE} actualizat — ${pacienti.length} pacienți, ${vizite.length} vizite, ${angajati.length} angajați, ${ambulante.length} ambulanțe, ${zileAmb.length} zile amb., ${curseAmb.length} curse amb.`);
 }
 
 loadLastBackup();
