@@ -308,44 +308,51 @@ function migrateAdreseFrecvente() {
   }
 }
 
-// ===== Migrare: backfill amb_adrese_frecvente din date existente (amb_zile, amb_curse) =====
+// ===== Migrare: sincronizează amb_adrese_frecvente cu istoricul din amb_zile/amb_curse =====
+// Rulează la fiecare pornire (idempotent): recalculează de câte ori apare fiecare adresă în
+// amb_zile (locatie_start, locatie_final) și amb_curse (locatie_plecare, locatie_sosire) și
+// ridică utilizari la acel număr dacă e mai mare decât ce există deja (MAX, nu adunare) —
+// nu scade niciodată un contor deja crescut prin utilizare curentă (inregistreazaAdresa) și
+// nu se umflă la restart-uri repetate. Nu se bazează pe „tabela e goală", care ar sări definitiv
+// backfill-ul de îndată ce o singură adresă e înregistrată prin utilizare curentă.
 function migrateAdreseFrecventeBackfill() {
   try {
-    const countStmt = sqlJsDb.prepare('SELECT COUNT(*) as n FROM amb_adrese_frecvente');
-    countStmt.step();
-    const { n } = countStmt.getAsObject();
-    countStmt.free();
-    if (n > 0) return; // deja populat (backfill anterior sau utilizare curentă)
-
-    const upsert = (adresa) => {
+    const counts = new Map();
+    const bump = (adresa) => {
       if (!adresa || typeof adresa !== 'string' || !adresa.trim()) return;
-      sqlJsDb.run(`
-        INSERT INTO amb_adrese_frecvente (adresa, utilizari, ultima_utilizare)
-        VALUES (?, 1, datetime('now'))
-        ON CONFLICT(adresa) DO UPDATE SET
-          utilizari = utilizari + 1,
-          ultima_utilizare = datetime('now')
-      `, [adresa.trim()]);
+      const key = adresa.trim();
+      counts.set(key, (counts.get(key) || 0) + 1);
     };
 
     const zileStmt = sqlJsDb.prepare('SELECT locatie_start, locatie_final FROM amb_zile');
     while (zileStmt.step()) {
       const row = zileStmt.getAsObject();
-      upsert(row.locatie_start);
-      upsert(row.locatie_final);
+      bump(row.locatie_start);
+      bump(row.locatie_final);
     }
     zileStmt.free();
 
     const curseStmt = sqlJsDb.prepare('SELECT locatie_plecare, locatie_sosire FROM amb_curse');
     while (curseStmt.step()) {
       const row = curseStmt.getAsObject();
-      upsert(row.locatie_plecare);
-      upsert(row.locatie_sosire);
+      bump(row.locatie_plecare);
+      bump(row.locatie_sosire);
     }
     curseStmt.free();
 
+    if (counts.size === 0) return;
+
+    for (const [adresa, count] of counts) {
+      sqlJsDb.run(`
+        INSERT INTO amb_adrese_frecvente (adresa, utilizari, ultima_utilizare)
+        VALUES (?, ?, datetime('now'))
+        ON CONFLICT(adresa) DO UPDATE SET
+          utilizari = MAX(utilizari, excluded.utilizari)
+      `, [adresa, count]);
+    }
+
     saveDb();
-    console.log('✓ Migration: amb_adrese_frecvente populat din date existente (amb_zile, amb_curse)');
+    console.log(`✓ Migration: amb_adrese_frecvente sincronizat cu ${counts.size} adrese din amb_zile/amb_curse`);
   } catch (err) {
     console.error('[Migration amb_adrese_frecvente backfill]', err.message);
   }

@@ -78,7 +78,9 @@ export default function AddressAutocomplete({
   };
 
   const handleFocus = () => {
-    fetchSugestiiLocale(value || '');
+    // La focus, fără să fi tastat, arătăm top 10 cele mai folosite adrese — nu filtrate
+    // după valoarea curentă (câmpul poate fi deja precompletat cu o adresă anterioară).
+    fetchSugestiiLocale('');
     fetchSugestiiGoogle(value || '');
     setShowDropdown(true);
   };
@@ -142,9 +144,11 @@ export default function AddressAutocomplete({
             >
               <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.label}</span>
               {item.sursa === 'local' ? (
-                <span style={{ color: 'var(--text-secondary)', fontSize: 11, flexShrink: 0 }}>{item.utilizari}×</span>
+                <span style={{ color: 'var(--text-secondary)', fontSize: 11, flexShrink: 0, whiteSpace: 'nowrap' }}>
+                  🕓 Folosit anterior ({item.utilizari}×)
+                </span>
               ) : (
-                <span style={{ color: 'var(--text-secondary)', fontSize: 11, flexShrink: 0 }}>📍 Google</span>
+                <span style={{ color: 'var(--text-secondary)', fontSize: 11, flexShrink: 0, whiteSpace: 'nowrap' }}>📍 Google</span>
               )}
             </div>
           ))}
