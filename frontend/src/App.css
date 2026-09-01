@@ -398,24 +398,90 @@ select.form-control { cursor: pointer; padding-right: 32px; background-image: ur
 }
 
 /* ===== TABLE ===== */
+/* Fallback: scroll orizontal doar dacă tot nu încape după regulile responsive de mai jos. */
 .table-wrapper { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-table { width: 100%; border-collapse: collapse; }
+table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
 thead { background: var(--bg); }
+
+/* Desktop (>1200px): font 13px, padding redus */
 th {
-  padding: 12px 14px;
-  font-size: 11px;
+  padding: 6px 8px;
+  font-size: 13px;
   font-weight: 700;
   color: var(--text-secondary);
   text-align: left;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   border-bottom: 2px solid var(--border);
+  /* etichetele se pot rupe pe 2 rânduri — trunchierea le-ar face ilizibile */
+  white-space: normal;
+  word-break: break-word;
+}
+td {
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
-td { padding: 13px 14px; border-bottom: 1px solid var(--border); font-size: 14px; color: var(--text); }
 tr:last-child td { border-bottom: none; }
 tr:hover td { background: var(--primary-lighter); }
-.table-actions { display: flex; gap: 6px; align-items: center; }
+/* flex-wrap: previne ca un grup de butoane dintr-o celulă îngustă să forțeze
+   coloana să depășească lățimea alocată (table-layout: fixed) și să iasă
+   vizual din card (care are overflow:hidden pentru colțurile rotunjite). */
+.table-actions { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+
+/* Coloane numerice (km, odometru etc.) — mai înguste, aliniate dreapta */
+th.col-num, td.col-num { text-align: right; }
+/* Coloane de adresă/text lung — mai late, wrap în loc de trunchiere */
+th.col-wide, td.col-wide { white-space: normal; word-break: break-word; }
+
+/* Rând al cărui click deschide detaliile ascunse pe mobil */
+tr.row-expandable { cursor: pointer; }
+
+/* Priorități de coloane pentru ascundere responsive:
+   .col-p3 = ascunsă pe tabletă ȘI mobil (cea mai puțin importantă)
+   .col-p2 = ascunsă doar pe mobil
+   (fără clasă)  = esențială, mereu vizibilă */
+
+/* Tabletă (768px–1200px) */
+@media (max-width: 1200px) {
+  th, td { font-size: 12px; padding: 5px 6px; }
+  th.col-p3, td.col-p3 { display: none; }
+}
+
+/* Rând de detalii (coloanele ascunse pe mobil) — afișat doar sub 768px, doar când e expandat */
+.row-detail { display: none; }
+.row-detail-grid {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 4px 12px;
+  padding: 10px 14px;
+  font-size: 12px;
+  word-break: break-word;
+}
+.row-detail-grid dt { font-weight: 700; color: var(--text-secondary); margin: 0; }
+.row-detail-grid dd { margin: 0; color: var(--text); }
+
+/* Mobil (<768px): doar coloanele esențiale + expand pe click pentru rest.
+   table-layout trece pe auto: pe mobil rămân vizibile doar câteva coloane
+   scurte, deci nu mai e nevoie de trunchiere cu procente fixe — și auto
+   evită busculada de lățimi cauzată de rândul de detalii (colSpan) care
+   apare/dispare la expandare într-un layout fixed. */
+@media (max-width: 768px) {
+  table { table-layout: auto; }
+
+  th.col-p2, td.col-p2,
+  th.col-p3, td.col-p3 { display: none; }
+
+  tr.row-expanded + .row-detail { display: table-row; }
+}
 
 /* ===== MOBILE PATIENT CARDS ===== */
 .patient-card-mobile {
@@ -749,8 +815,6 @@ tr:hover td { background: var(--primary-lighter); }
   .profile-header { padding: 20px 16px; border-radius: 12px; }
   .profile-header h2 { font-size: 20px; }
   .visit-header { flex-direction: column; align-items: flex-start; }
-  th { font-size: 10px; padding: 10px 10px; }
-  td { font-size: 13px; padding: 10px 10px; }
 }
 
 @media (max-width: 400px) {

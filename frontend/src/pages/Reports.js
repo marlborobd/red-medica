@@ -13,6 +13,12 @@ export default function Reports() {
   const [visitsLoading, setVisitsLoading] = useState(false);
   const [year, setYear] = useState(new Date().getFullYear());
   const [filters, setFilters] = useState({ from: '', to: '', angajat_id: '' });
+  const [expandedVisits, setExpandedVisits] = useState(() => new Set());
+  const toggleVisitExpand = (id) => setExpandedVisits(prev => {
+    const next = new Set(prev);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    return next;
+  });
   const [activeTab, setActiveTab] = useState('general');
   const [backupLoading, setBackupLoading] = useState(false);
   const [backupMsg, setBackupMsg] = useState(null);
@@ -234,26 +240,26 @@ export default function Reports() {
                 <div className="table-wrapper mt-2">
                   <table>
                     <thead>
-                      <tr><th>Lună</th><th>Vizite</th><th>Total Încasat</th></tr>
+                      <tr><th>Lună</th><th className="col-num">Vizite</th><th className="col-num">Total Încasat</th></tr>
                     </thead>
                     <tbody>
                       {MONTHS.map((month, idx) => {
                         const d = monthly.find(m => parseInt(m.luna) === idx + 1);
                         if (!d) return (
-                          <tr key={month}><td>{month}</td><td style={{ color: 'var(--text-secondary)' }}>0</td><td>—</td></tr>
+                          <tr key={month}><td>{month}</td><td className="col-num" style={{ color: 'var(--text-secondary)' }}>0</td><td className="col-num">—</td></tr>
                         );
                         return (
                           <tr key={month}>
                             <td><strong>{month}</strong></td>
-                            <td><span className="badge badge-blue">{d.vizite}</span></td>
-                            <td style={{ color: 'var(--secondary)', fontWeight: 600 }}>{formatMoney(d.total_incasat)}</td>
+                            <td className="col-num"><span className="badge badge-blue">{d.vizite}</span></td>
+                            <td className="col-num" style={{ color: 'var(--secondary)', fontWeight: 600 }}>{formatMoney(d.total_incasat)}</td>
                           </tr>
                         );
                       })}
                       <tr style={{ background: 'var(--primary-light)', fontWeight: 700 }}>
                         <td>TOTAL</td>
-                        <td>{monthly.reduce((s, m) => s + m.vizite, 0)}</td>
-                        <td style={{ color: 'var(--secondary)' }}>{formatMoney(monthly.reduce((s, m) => s + (m.total_incasat || 0), 0))}</td>
+                        <td className="col-num">{monthly.reduce((s, m) => s + m.vizite, 0)}</td>
+                        <td className="col-num" style={{ color: 'var(--secondary)' }}>{formatMoney(monthly.reduce((s, m) => s + (m.total_incasat || 0), 0))}</td>
                       </tr>
                     </tbody>
                   </table>
@@ -271,16 +277,22 @@ export default function Reports() {
               <div className="table-wrapper">
                 <table>
                   <thead>
-                    <tr><th>Angajat</th><th>Rol</th><th>Pacienți</th><th>Vizite</th><th>Total Încasat</th></tr>
+                    <tr>
+                      <th>Angajat</th>
+                      <th className="col-p2">Rol</th>
+                      <th className="col-p2 col-num">Pacienți</th>
+                      <th className="col-num">Vizite</th>
+                      <th className="col-num">Total Încasat</th>
+                    </tr>
                   </thead>
                   <tbody>
                     {employees.map(e => (
                       <tr key={e.id}>
                         <td><strong>{e.name}</strong><br /><small style={{ color: 'var(--text-secondary)' }}>{e.email}</small></td>
-                        <td><span className={`badge ${e.role === 'admin' ? 'badge-purple' : 'badge-blue'}`}>{e.role === 'admin' ? 'Admin' : 'Angajat'}</span></td>
-                        <td>{e.pacienti}</td>
-                        <td><strong>{e.vizite}</strong></td>
-                        <td style={{ color: 'var(--secondary)', fontWeight: 600 }}>{formatMoney(e.total_incasat)}</td>
+                        <td className="col-p2"><span className={`badge ${e.role === 'admin' ? 'badge-purple' : 'badge-blue'}`}>{e.role === 'admin' ? 'Admin' : 'Angajat'}</span></td>
+                        <td className="col-p2 col-num">{e.pacienti}</td>
+                        <td className="col-num"><strong>{e.vizite}</strong></td>
+                        <td className="col-num" style={{ color: 'var(--secondary)', fontWeight: 600 }}>{formatMoney(e.total_incasat)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -344,21 +356,47 @@ export default function Reports() {
                 <div className="table-wrapper">
                   <table>
                     <thead>
-                      <tr><th>Data</th><th>Pacient</th><th>CNP</th><th>Angajat</th><th>Diagnostic</th><th>Stare</th><th>Tensiune</th><th>Temp.</th><th>Încasat</th></tr>
+                      <tr>
+                        <th>Data</th>
+                        <th className="col-wide">Pacient</th>
+                        <th className="col-p3">CNP</th>
+                        <th className="col-p2">Angajat</th>
+                        <th className="col-p3 col-wide">Diagnostic</th>
+                        <th>Stare</th>
+                        <th className="col-p2">Tensiune</th>
+                        <th className="col-p2">Temp.</th>
+                        <th className="col-num">Încasat</th>
+                      </tr>
                     </thead>
                     <tbody>
                       {visits.map(v => (
-                        <tr key={v.id}>
-                          <td>{formatDate(v.data)}<br /><small style={{ color: 'var(--text-secondary)' }}>{v.ora}</small></td>
-                          <td><strong>{v.patient_name}</strong></td>
-                          <td style={{ fontFamily: 'monospace', fontSize: 12 }}>{v.cnp}</td>
-                          <td>{v.angajat_name}</td>
-                          <td>{v.diagnostic || '-'}</td>
-                          <td>{v.stare_pacient ? <span className="badge badge-blue">{v.stare_pacient}</span> : '-'}</td>
-                          <td>{v.tensiune || '-'}</td>
-                          <td>{v.temperatura ? `${v.temperatura}°C` : '-'}</td>
-                          <td style={{ color: 'var(--secondary)', fontWeight: 600 }}>{v.suma_incasata > 0 ? formatMoney(v.suma_incasata) : '-'}</td>
-                        </tr>
+                        <React.Fragment key={v.id}>
+                          <tr
+                            className={`row-expandable${expandedVisits.has(v.id) ? ' row-expanded' : ''}`}
+                            onClick={() => toggleVisitExpand(v.id)}
+                          >
+                            <td>{formatDate(v.data)}<br /><small style={{ color: 'var(--text-secondary)' }}>{v.ora}</small></td>
+                            <td className="col-wide"><strong>{v.patient_name}</strong></td>
+                            <td className="col-p3" style={{ fontFamily: 'monospace', fontSize: 12 }}>{v.cnp}</td>
+                            <td className="col-p2">{v.angajat_name}</td>
+                            <td className="col-p3 col-wide">{v.diagnostic || '-'}</td>
+                            <td>{v.stare_pacient ? <span className="badge badge-blue">{v.stare_pacient}</span> : '-'}</td>
+                            <td className="col-p2">{v.tensiune || '-'}</td>
+                            <td className="col-p2">{v.temperatura ? `${v.temperatura}°C` : '-'}</td>
+                            <td className="col-num" style={{ color: 'var(--secondary)', fontWeight: 600 }}>{v.suma_incasata > 0 ? formatMoney(v.suma_incasata) : '-'}</td>
+                          </tr>
+                          <tr className="row-detail">
+                            <td colSpan={9}>
+                              <dl className="row-detail-grid">
+                                <dt>CNP</dt><dd style={{ fontFamily: 'monospace' }}>{v.cnp}</dd>
+                                <dt>Angajat</dt><dd>{v.angajat_name}</dd>
+                                <dt>Diagnostic</dt><dd>{v.diagnostic || '-'}</dd>
+                                <dt>Tensiune</dt><dd>{v.tensiune || '-'}</dd>
+                                <dt>Temp.</dt><dd>{v.temperatura ? `${v.temperatura}°C` : '-'}</dd>
+                              </dl>
+                            </td>
+                          </tr>
+                        </React.Fragment>
                       ))}
                     </tbody>
                   </table>

@@ -165,13 +165,13 @@ export default function PatientList() {
                   <thead>
                     <tr>
                       <th>#</th>
-                      <th>Nume</th>
-                      <th>Data Nașterii</th>
-                      <th>Vârstă</th>
+                      <th className="col-wide">Nume</th>
+                      <th className="col-p3">Data Nașterii</th>
+                      <th className="col-num">Vârstă</th>
                       <th>Telefon</th>
-                      <th>GDPR</th>
-                      {isAdmin && <th>Angajat</th>}
-                      <th>Înregistrat</th>
+                      <th className="col-p3">GDPR</th>
+                      {isAdmin && <th className="col-p3">Angajat</th>}
+                      <th className="col-p3">Înregistrat</th>
                       <th>Acțiuni</th>
                     </tr>
                   </thead>
@@ -179,7 +179,7 @@ export default function PatientList() {
                     {patients.map((p, idx) => (
                       <tr key={p.id}>
                         <td style={{ color: 'var(--text-secondary)', fontSize: 12 }}>{idx + 1}</td>
-                        <td>
+                        <td className="col-wide">
                           <button
                             onClick={() => navigate(`/pacienti/${p.id}`)}
                             style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--primary)', fontWeight: 700, fontSize: 14 }}
@@ -187,16 +187,16 @@ export default function PatientList() {
                             {p.nume}
                           </button>
                         </td>
-                        <td>{p.data_nasterii ? formatDate(p.data_nasterii) : '—'}</td>
-                        <td>{p.varsta ? <span className="badge badge-blue">{p.varsta} ani</span> : '—'}</td>
+                        <td className="col-p3">{p.data_nasterii ? formatDate(p.data_nasterii) : '—'}</td>
+                        <td className="col-num">{p.varsta ? <span className="badge badge-blue">{p.varsta} ani</span> : '—'}</td>
                         <td>{p.telefon || '—'}</td>
-                        <td>
+                        <td className="col-p3">
                           {p.acord_gdpr
                             ? <span className="badge badge-green">✓ Da</span>
                             : <span className="badge badge-red">✗ Nu</span>}
                         </td>
-                        {isAdmin && <td style={{ fontSize: 13 }}>{p.creator_name || '—'}</td>}
-                        <td style={{ fontSize: 12 }}>{formatDate(p.data_inregistrare)}</td>
+                        {isAdmin && <td className="col-p3" style={{ fontSize: 13 }}>{p.creator_name || '—'}</td>}
+                        <td className="col-p3" style={{ fontSize: 12 }}>{formatDate(p.data_inregistrare)}</td>
                         <td>
                           <div className="table-actions">
                             <button className="btn btn-ghost btn-sm btn-icon" onClick={() => navigate(`/pacienti/${p.id}`)} title="Profil">👁️</button>

@@ -255,27 +255,23 @@ export default function AddVisit() {
                       src={url}
                       alt={`Poza ${idx + 1}`}
                       onClick={() => window.open(url, '_blank')}
-                      style={{
-                        width: 80, height: 80,
+                      style={{ width: 80, height: 80,
                         objectFit: 'cover',
                         borderRadius: 8,
                         border: '2px solid var(--border)',
-                        cursor: 'pointer'
-                      }}
+                        cursor: 'pointer' }}
                     />
                     <button
                       type="button"
                       onClick={() => removePhoto(idx)}
                       title="Șterge fotografia"
-                      style={{
-                        position: 'absolute', top: -7, right: -7,
+                      style={{ position: 'absolute', top: -7, right: -7,
                         background: 'var(--danger)', color: 'white',
                         border: 'none', borderRadius: '50%',
                         width: 22, height: 22, fontSize: 12,
                         cursor: 'pointer', display: 'flex',
                         alignItems: 'center', justifyContent: 'center',
-                        padding: 0, fontWeight: 700
-                      }}
+                        padding: 0, fontWeight: 700 }}
                     >✕</button>
                   </div>
                 ))}
@@ -379,25 +375,25 @@ export default function AddVisit() {
               <div style={{ color: 'var(--text-secondary)', fontSize: 13 }}>Nicio plată înregistrată încă.</div>
             ) : (
               <>
-                <div style={{ overflowX: 'auto' }}>
-                  <table style={{ fontSize: 13, width: '100%' }}>
+                <div className="table-wrapper">
+                  <table>
                     <thead>
                       <tr>
                         <th>Data</th>
-                        <th>Ora</th>
-                        <th style={{ textAlign: 'right' }}>Sumă (lei)</th>
-                        <th>Angajat</th>
+                        <th className="col-p2">Ora</th>
+                        <th className="col-num">Sumă (lei)</th>
+                        <th className="col-wide">Angajat</th>
                       </tr>
                     </thead>
                     <tbody>
                       {istoricPlati.map(p => (
                         <tr key={p.id}>
-                          <td style={{ whiteSpace: 'nowrap' }}>{p.data_vizitei}</td>
-                          <td style={{ whiteSpace: 'nowrap' }}>{p.ora}</td>
-                          <td style={{ textAlign: 'right', fontWeight: 600, color: 'var(--secondary)', whiteSpace: 'nowrap' }}>
+                          <td>{p.data_vizitei}</td>
+                          <td className="col-p2">{p.ora}</td>
+                          <td className="col-num" style={{ fontWeight: 600, color: 'var(--secondary)' }}>
                             {Number(p.suma_incasata).toLocaleString('ro-RO')}
                           </td>
-                          <td>{p.angajat}</td>
+                          <td className="col-wide">{p.angajat}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -413,8 +409,7 @@ export default function AddVisit() {
       </div>
 
       {/* Sticky footer */}
-      <div style={{
-        position: 'fixed',
+      <div style={{ position: 'fixed',
         bottom: 'var(--bottom-nav-height, 0)',
         left: 0, right: 0,
         background: 'white',
@@ -424,8 +419,7 @@ export default function AddVisit() {
         gap: 12,
         justifyContent: 'flex-end',
         zIndex: 50,
-        boxShadow: '0 -2px 12px rgba(0,0,0,0.08)'
-      }}>
+        boxShadow: '0 -2px 12px rgba(0,0,0,0.08)' }}>
         <button type="button" className="btn btn-ghost" onClick={() => navigate(`/pacienti/${patientId}`)}>
           Anulare
         </button>

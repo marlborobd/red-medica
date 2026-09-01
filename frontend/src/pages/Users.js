@@ -103,22 +103,22 @@ export default function Users() {
               <table>
                 <thead>
                   <tr>
-                    <th>Nume</th>
-                    <th>Email</th>
+                    <th className="col-wide">Nume</th>
+                    <th className="col-p2 col-wide">Email</th>
                     <th>Rol</th>
                     <th>Status</th>
-                    <th>Data Creare</th>
+                    <th className="col-p3">Data Creare</th>
                     <th>Acțiuni</th>
                   </tr>
                 </thead>
                 <tbody>
                   {users.map(u => (
                     <tr key={u.id}>
-                      <td>
+                      <td className="col-wide">
                         <strong>{u.name}</strong>
                         {u.id === currentUser?.id && <span className="badge badge-blue" style={{ marginLeft: 8 }}>Tu</span>}
                       </td>
-                      <td style={{ color: 'var(--text-secondary)' }}>{u.email}</td>
+                      <td className="col-p2 col-wide" style={{ color: 'var(--text-secondary)' }}>{u.email}</td>
                       <td>
                         <span className={`badge ${u.role === 'admin' ? 'badge-purple' : u.role === 'ambulanta' ? 'badge-green' : 'badge-blue'}`}>
                           {u.role === 'admin' ? '🛡️ Administrator' : u.role === 'ambulanta' ? '🚑 Ambulanță' : '👤 Angajat'}
@@ -129,7 +129,7 @@ export default function Users() {
                           {u.active ? '✓ Activ' : '✗ Inactiv'}
                         </span>
                       </td>
-                      <td>{formatDate(u.created_at)}</td>
+                      <td className="col-p3">{formatDate(u.created_at)}</td>
                       <td>
                         <div className="table-actions">
                           <button className="btn btn-ghost btn-sm" onClick={() => openEdit(u)}>✏️ Editează</button>

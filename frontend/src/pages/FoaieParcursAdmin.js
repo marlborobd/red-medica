@@ -329,35 +329,40 @@ export default function FoaieParcursAdmin() {
         ) : foi.length === 0 ? (
           <div style={{ color: '#999', textAlign: 'center', padding: '24px 0' }}>Nu există foi de parcurs. Selectați filtrele și apăsați Aplică Filtre.</div>
         ) : (
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+          <div className="table-wrapper">
+            <table>
               <thead>
                 <tr style={{ background: '#C0392B', color: '#fff' }}>
-                  {['Data', 'Angajat', 'Nr. Înmtr.', 'Ora Înc.', 'Ora Final', 'KM Înc.', 'KM Final', 'KM Total', 'Observații'].map(h => (
-                    <th key={h} style={{ padding: '8px 10px', textAlign: 'left', fontWeight: 700, whiteSpace: 'nowrap' }}>{h}</th>
+                  {[
+                    ['Data', ''], ['Angajat', 'col-p2 col-wide'], ['Nr. Înmtr.', ''],
+                    ['Ora Înc.', 'col-p2'], ['Ora Final', 'col-p2'],
+                    ['KM Înc.', 'col-p3 col-num'], ['KM Final', 'col-p3 col-num'], ['KM Total', 'col-num'],
+                    ['Observații', 'col-p2 col-wide'],
+                  ].map(([h, cls]) => (
+                    <th key={h} className={cls} style={{ fontWeight: 700 }}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {foi.map((f, i) => (
-                  <tr key={f.id} style={{ background: i % 2 === 1 ? '#FADBD8' : '#fff', borderBottom: '1px solid #f0f0f0' }}>
-                    <td style={{ padding: '8px 10px', whiteSpace: 'nowrap' }}>{formatData(f.data)}</td>
-                    <td style={{ padding: '8px 10px', whiteSpace: 'nowrap' }}>{f.angajat_nume || f.angajat_email}</td>
-                    <td style={{ padding: '8px 10px' }}>{f.numar_inmatriculare || '—'}</td>
-                    <td style={{ padding: '8px 10px' }}>{f.ora_inceput || '—'}</td>
-                    <td style={{ padding: '8px 10px' }}>{f.ora_final || '—'}</td>
-                    <td style={{ padding: '8px 10px' }}>{f.km_inceput !== null ? f.km_inceput : '—'}</td>
-                    <td style={{ padding: '8px 10px' }}>{f.km_final !== null ? f.km_final : '—'}</td>
-                    <td style={{ padding: '8px 10px', fontWeight: 700, color: '#C0392B' }}>{f.km_total !== null ? f.km_total : '—'}</td>
-                    <td style={{ padding: '8px 10px', maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis' }}>{f.observatii || '—'}</td>
+                  <tr key={f.id} style={{ background: i % 2 === 1 ? '#FADBD8' : '#fff' }}>
+                    <td>{formatData(f.data)}</td>
+                    <td className="col-p2 col-wide">{f.angajat_nume || f.angajat_email}</td>
+                    <td>{f.numar_inmatriculare || '—'}</td>
+                    <td className="col-p2">{f.ora_inceput || '—'}</td>
+                    <td className="col-p2">{f.ora_final || '—'}</td>
+                    <td className="col-p3 col-num">{f.km_inceput !== null ? f.km_inceput : '—'}</td>
+                    <td className="col-p3 col-num">{f.km_final !== null ? f.km_final : '—'}</td>
+                    <td className="col-num" style={{ fontWeight: 700, color: '#C0392B' }}>{f.km_total !== null ? f.km_total : '—'}</td>
+                    <td className="col-p2 col-wide" title={f.observatii || ''}>{f.observatii || '—'}</td>
                   </tr>
                 ))}
               </tbody>
               <tfoot>
                 <tr style={{ background: '#FFF9C4', fontWeight: 700 }}>
-                  <td colSpan={7} style={{ padding: '8px 10px', textAlign: 'right' }}>TOTAL KM:</td>
-                  <td style={{ padding: '8px 10px', color: '#C0392B', fontSize: 15 }}>{totalKm}</td>
-                  <td></td>
+                  <td colSpan={7} style={{ textAlign: 'right' }}>TOTAL KM:</td>
+                  <td className="col-num" style={{ color: '#C0392B', fontSize: 15 }}>{totalKm}</td>
+                  <td className="col-p2 col-wide"></td>
                 </tr>
               </tfoot>
             </table>

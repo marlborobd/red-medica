@@ -290,7 +290,7 @@ export default function FoaieParcurs() {
   };
 
   const card = { background: '#fff', borderRadius: 12, padding: 24, boxShadow: '0 2px 8px rgba(0,0,0,0.08)', marginBottom: 24 };
-  const inputStyle = { width: '100%', padding: '10px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 15, boxSizing: 'border-box' };
+  const inputStyle = { padding: '10px 12px', border: '1px solid #ddd', borderRadius: 8, fontSize: 15, boxSizing: 'border-box' };
   const labelStyle = { display: 'block', marginBottom: 4, fontWeight: 600, fontSize: 13, color: '#555' };
   const btnPrimary = { background: '#C0392B', color: '#fff', border: 'none', borderRadius: 8, padding: '10px 20px', fontSize: 15, fontWeight: 700, cursor: 'pointer' };
   const btnSecondary = { background: '#f5f5f5', color: '#333', border: '1px solid #ddd', borderRadius: 8, padding: '10px 20px', fontSize: 15, fontWeight: 600, cursor: 'pointer' };
@@ -384,27 +384,31 @@ export default function FoaieParcurs() {
         {foi.length === 0 ? (
           <div style={{ color: '#999', textAlign: 'center', padding: '24px 0' }}>Nu există foi de parcurs înregistrate.</div>
         ) : (
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+          <div className="table-wrapper">
+            <table>
               <thead>
                 <tr style={{ background: '#C0392B', color: '#fff' }}>
-                  {['Data', 'Nr. Înmtr.', 'Ora Înc.', 'Ora Final', 'KM Înc.', 'KM Final', 'KM Total', 'Observații', 'Acțiuni'].map(h => (
-                    <th key={h} style={{ padding: '8px 10px', textAlign: 'left', fontWeight: 700, whiteSpace: 'nowrap' }}>{h}</th>
+                  {[
+                    ['Data', ''], ['Nr. Înmtr.', ''], ['Ora Înc.', 'col-p2'], ['Ora Final', 'col-p2'],
+                    ['KM Înc.', 'col-p3 col-num'], ['KM Final', 'col-p3 col-num'], ['KM Total', 'col-num'],
+                    ['Observații', 'col-p2 col-wide'], ['Acțiuni', ''],
+                  ].map(([h, cls]) => (
+                    <th key={h} className={cls} style={{ fontWeight: 700 }}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {foi.map((f, i) => (
-                  <tr key={f.id} style={{ background: i % 2 === 1 ? '#fff0f0' : '#fff', borderBottom: '1px solid #f0f0f0' }}>
-                    <td style={{ padding: '8px 10px', whiteSpace: 'nowrap' }}>{formatData(f.data)}</td>
-                    <td style={{ padding: '8px 10px' }}>{f.numar_inmatriculare || '—'}</td>
-                    <td style={{ padding: '8px 10px' }}>{f.ora_inceput || '—'}</td>
-                    <td style={{ padding: '8px 10px' }}>{f.ora_final || '—'}</td>
-                    <td style={{ padding: '8px 10px' }}>{f.km_inceput !== null ? f.km_inceput : '—'}</td>
-                    <td style={{ padding: '8px 10px' }}>{f.km_final !== null ? f.km_final : '—'}</td>
-                    <td style={{ padding: '8px 10px', fontWeight: 700, color: '#C0392B' }}>{f.km_total !== null ? f.km_total : '—'}</td>
-                    <td style={{ padding: '8px 10px', maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis' }}>{f.observatii || '—'}</td>
-                    <td style={{ padding: '8px 10px', whiteSpace: 'nowrap' }}>
+                  <tr key={f.id} style={{ background: i % 2 === 1 ? '#fff0f0' : '#fff' }}>
+                    <td>{formatData(f.data)}</td>
+                    <td>{f.numar_inmatriculare || '—'}</td>
+                    <td className="col-p2">{f.ora_inceput || '—'}</td>
+                    <td className="col-p2">{f.ora_final || '—'}</td>
+                    <td className="col-p3 col-num">{f.km_inceput !== null ? f.km_inceput : '—'}</td>
+                    <td className="col-p3 col-num">{f.km_final !== null ? f.km_final : '—'}</td>
+                    <td className="col-num" style={{ fontWeight: 700, color: '#C0392B' }}>{f.km_total !== null ? f.km_total : '—'}</td>
+                    <td className="col-p2 col-wide" title={f.observatii || ''}>{f.observatii || '—'}</td>
+                    <td style={{ whiteSpace: 'nowrap' }}>
                       <button onClick={() => handleEdit(f)} style={{ ...btnSecondary, padding: '4px 10px', fontSize: 12, marginRight: 6 }}>✏️</button>
                       <button onClick={() => handleDelete(f.id)} style={{ ...btnPrimary, padding: '4px 10px', fontSize: 12 }}>🗑️</button>
                     </td>

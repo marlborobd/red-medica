@@ -66,6 +66,15 @@ export default function AmbulantaRapoarte() {
   const [raport, setRaport] = useState(null);
   const [error, setError] = useState('');
   const [generandPdf, setGenerandPdf] = useState(false);
+  const [expandSumar, setExpandSumar] = useState(false);
+  const [expandZile, setExpandZile] = useState(() => new Set());
+  const [expandCurseRaport, setExpandCurseRaport] = useState(() => new Set());
+
+  const toggleSet = (setter, id) => setter(prev => {
+    const next = new Set(prev);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    return next;
+  });
 
   const PRESETURI = preseturi();
 
@@ -209,31 +218,56 @@ export default function AmbulantaRapoarte() {
                 Sumar perioadă — {raport.ambulanta.numar_inmatriculare} ({raport.perioada.de_la} → {raport.perioada.pana_la})
               </div>
               {raport.sumar_perioada ? (
-                <div style={{ overflowX: 'auto', paddingBottom: 4 }}>
-                  <table style={{ fontSize: 12, minWidth: 700 }}>
+                <div className="table-wrapper">
+                  <table>
                     <thead>
                       <tr>
-                        <th>Data început</th><th>Locație început</th>
-                        <th>Data final</th><th>Locație final</th>
-                        <th>Total km</th><th>Odo start</th><th>Odo final</th>
-                        <th>Staț. pornit</th><th>Condus</th><th>Staț. oprit</th>
-                        <th>V. medie</th><th>V. max</th>
+                        <th style={{ width: 95 }}>Data început</th>
+                        <th className="col-wide">Locație început</th>
+                        <th className="col-p2" style={{ width: 95 }}>Data final</th>
+                        <th className="col-p2 col-wide">Locație final</th>
+                        <th className="col-num">Total km</th>
+                        <th className="col-p3 col-num">Odo start</th>
+                        <th className="col-p3 col-num">Odo final</th>
+                        <th className="col-p2">Staț. pornit</th>
+                        <th className="col-p2">Condus</th>
+                        <th className="col-p3">Staț. oprit</th>
+                        <th className="col-p2 col-num">V. medie</th>
+                        <th className="col-p3 col-num">V. max</th>
                       </tr>
                     </thead>
                     <tbody>
-                      <tr>
+                      <tr
+                        className={`row-expandable${expandSumar ? ' row-expanded' : ''}`}
+                        onClick={() => setExpandSumar(v => !v)}
+                      >
                         <td>{raport.sumar_perioada.data_start}</td>
-                        <td style={{ color: '#0A50B4' }}>{raport.sumar_perioada.locatie_start}</td>
-                        <td>{raport.sumar_perioada.data_final}</td>
-                        <td style={{ color: '#0A50B4' }}>{raport.sumar_perioada.locatie_final}</td>
-                        <td><strong>{formatKm(raport.sumar_perioada.total_km)}</strong></td>
-                        <td>{formatOdo(raport.sumar_perioada.odometru_start)}</td>
-                        <td>{formatOdo(raport.sumar_perioada.odometru_final)}</td>
-                        <td>{formatDurata(raport.sumar_perioada.stationare_pornit_sec)}</td>
-                        <td>{formatDurata(raport.sumar_perioada.condus_sec)}</td>
-                        <td>{formatDurata(raport.sumar_perioada.stationare_oprit_sec)}</td>
-                        <td>{formatV(raport.sumar_perioada.viteza_medie)}</td>
-                        <td>{formatV(raport.sumar_perioada.viteza_maxima)}</td>
+                        <td className="col-wide" style={{ color: '#0A50B4' }}>{raport.sumar_perioada.locatie_start}</td>
+                        <td className="col-p2">{raport.sumar_perioada.data_final}</td>
+                        <td className="col-p2 col-wide" style={{ color: '#0A50B4' }}>{raport.sumar_perioada.locatie_final}</td>
+                        <td className="col-num"><strong>{formatKm(raport.sumar_perioada.total_km)}</strong></td>
+                        <td className="col-p3 col-num">{formatOdo(raport.sumar_perioada.odometru_start)}</td>
+                        <td className="col-p3 col-num">{formatOdo(raport.sumar_perioada.odometru_final)}</td>
+                        <td className="col-p2">{formatDurata(raport.sumar_perioada.stationare_pornit_sec)}</td>
+                        <td className="col-p2">{formatDurata(raport.sumar_perioada.condus_sec)}</td>
+                        <td className="col-p3">{formatDurata(raport.sumar_perioada.stationare_oprit_sec)}</td>
+                        <td className="col-p2 col-num">{formatV(raport.sumar_perioada.viteza_medie)}</td>
+                        <td className="col-p3 col-num">{formatV(raport.sumar_perioada.viteza_maxima)}</td>
+                      </tr>
+                      <tr className="row-detail">
+                        <td colSpan={12}>
+                          <dl className="row-detail-grid">
+                            <dt>Data final</dt><dd>{raport.sumar_perioada.data_final}</dd>
+                            <dt>Locație final</dt><dd>{raport.sumar_perioada.locatie_final}</dd>
+                            <dt>Odo start</dt><dd>{formatOdo(raport.sumar_perioada.odometru_start)}</dd>
+                            <dt>Odo final</dt><dd>{formatOdo(raport.sumar_perioada.odometru_final)}</dd>
+                            <dt>Staț. pornit</dt><dd>{formatDurata(raport.sumar_perioada.stationare_pornit_sec)}</dd>
+                            <dt>Condus</dt><dd>{formatDurata(raport.sumar_perioada.condus_sec)}</dd>
+                            <dt>Staț. oprit</dt><dd>{formatDurata(raport.sumar_perioada.stationare_oprit_sec)}</dd>
+                            <dt>V. medie</dt><dd>{formatV(raport.sumar_perioada.viteza_medie)}</dd>
+                            <dt>V. max</dt><dd>{formatV(raport.sumar_perioada.viteza_maxima)}</dd>
+                          </dl>
+                        </td>
                       </tr>
                     </tbody>
                   </table>
@@ -247,36 +281,61 @@ export default function AmbulantaRapoarte() {
             {raport.zile.length > 0 && (
               <div className="card" style={{ marginBottom: 12 }}>
                 <div style={{ padding: '14px 20px 10px', fontWeight: 600, fontSize: 15 }}>Sumar pe zile</div>
-                <div style={{ overflowX: 'auto', paddingBottom: 4 }}>
-                  <table style={{ fontSize: 12, minWidth: 700 }}>
+                <div className="table-wrapper">
+                  <table>
                     <thead>
                       <tr>
-                        <th>Zi</th><th>Dată</th><th>Status</th>
-                        <th>Ora început</th><th>Loc. început</th>
-                        <th>Ora final</th><th>Loc. final</th>
-                        <th>Total km</th><th>Condus</th>
-                        <th>V. medie</th><th>V. max</th>
+                        <th className="col-p2" style={{ width: 90 }}>Zi</th>
+                        <th style={{ width: 95 }}>Dată</th>
+                        <th style={{ width: 110 }}>Status</th>
+                        <th className="col-p2" style={{ width: 75 }}>Ora început</th>
+                        <th className="col-p2 col-wide">Loc. început</th>
+                        <th className="col-p2" style={{ width: 75 }}>Ora final</th>
+                        <th className="col-p2 col-wide">Loc. final</th>
+                        <th className="col-num">Total km</th>
+                        <th className="col-p2">Condus</th>
+                        <th className="col-p3 col-num">V. medie</th>
+                        <th className="col-p3 col-num">V. max</th>
                       </tr>
                     </thead>
                     <tbody>
                       {raport.zile.map(zi => (
-                        <tr key={zi.id}>
-                          <td style={{ textTransform: 'capitalize' }}>{zi.zi_saptamana}</td>
-                          <td>{zi.data}</td>
-                          <td>
-                            <span className={`badge ${zi.status === 'finalizata' ? 'badge-green' : 'badge-blue'}`}>
-                              {zi.status === 'finalizata' ? '✓ Finalizată' : '● Deschisă'}
-                            </span>
-                          </td>
-                          <td>{zi.sumar_zi ? formatOra(zi.sumar_zi.ora_start) : '—'}</td>
-                          <td style={{ color: '#0A50B4' }}>{zi.sumar_zi?.locatie_start || '—'}</td>
-                          <td>{zi.sumar_zi ? formatOra(zi.sumar_zi.ora_final) : '—'}</td>
-                          <td style={{ color: '#0A50B4' }}>{zi.sumar_zi?.locatie_final || '—'}</td>
-                          <td><strong>{zi.sumar_zi ? formatKm(zi.sumar_zi.total_km) : '—'}</strong></td>
-                          <td>{zi.sumar_zi ? formatDurata(zi.sumar_zi.condus_sec) : '—'}</td>
-                          <td>{zi.sumar_zi ? formatV(zi.sumar_zi.viteza_medie) : '—'}</td>
-                          <td>{zi.sumar_zi ? formatV(zi.sumar_zi.viteza_maxima) : '—'}</td>
-                        </tr>
+                        <React.Fragment key={zi.id}>
+                          <tr
+                            className={`row-expandable${expandZile.has(zi.id) ? ' row-expanded' : ''}`}
+                            onClick={() => toggleSet(setExpandZile, zi.id)}
+                          >
+                            <td className="col-p2" style={{ textTransform: 'capitalize' }}>{zi.zi_saptamana}</td>
+                            <td>{zi.data}</td>
+                            <td>
+                              <span className={`badge ${zi.status === 'finalizata' ? 'badge-green' : 'badge-blue'}`}>
+                                {zi.status === 'finalizata' ? '✓ Finalizată' : '● Deschisă'}
+                              </span>
+                            </td>
+                            <td className="col-p2">{zi.sumar_zi ? formatOra(zi.sumar_zi.ora_start) : '—'}</td>
+                            <td className="col-p2 col-wide" style={{ color: '#0A50B4' }}>{zi.sumar_zi?.locatie_start || '—'}</td>
+                            <td className="col-p2">{zi.sumar_zi ? formatOra(zi.sumar_zi.ora_final) : '—'}</td>
+                            <td className="col-p2 col-wide" style={{ color: '#0A50B4' }}>{zi.sumar_zi?.locatie_final || '—'}</td>
+                            <td className="col-num"><strong>{zi.sumar_zi ? formatKm(zi.sumar_zi.total_km) : '—'}</strong></td>
+                            <td className="col-p2">{zi.sumar_zi ? formatDurata(zi.sumar_zi.condus_sec) : '—'}</td>
+                            <td className="col-p3 col-num">{zi.sumar_zi ? formatV(zi.sumar_zi.viteza_medie) : '—'}</td>
+                            <td className="col-p3 col-num">{zi.sumar_zi ? formatV(zi.sumar_zi.viteza_maxima) : '—'}</td>
+                          </tr>
+                          <tr className="row-detail">
+                            <td colSpan={11}>
+                              <dl className="row-detail-grid">
+                                <dt>Zi</dt><dd style={{ textTransform: 'capitalize' }}>{zi.zi_saptamana}</dd>
+                                <dt>Ora început</dt><dd>{zi.sumar_zi ? formatOra(zi.sumar_zi.ora_start) : '—'}</dd>
+                                <dt>Loc. început</dt><dd>{zi.sumar_zi?.locatie_start || '—'}</dd>
+                                <dt>Ora final</dt><dd>{zi.sumar_zi ? formatOra(zi.sumar_zi.ora_final) : '—'}</dd>
+                                <dt>Loc. final</dt><dd>{zi.sumar_zi?.locatie_final || '—'}</dd>
+                                <dt>Condus</dt><dd>{zi.sumar_zi ? formatDurata(zi.sumar_zi.condus_sec) : '—'}</dd>
+                                <dt>V. medie</dt><dd>{zi.sumar_zi ? formatV(zi.sumar_zi.viteza_medie) : '—'}</dd>
+                                <dt>V. max</dt><dd>{zi.sumar_zi ? formatV(zi.sumar_zi.viteza_maxima) : '—'}</dd>
+                              </dl>
+                            </td>
+                          </tr>
+                        </React.Fragment>
                       ))}
                     </tbody>
                   </table>
@@ -290,36 +349,60 @@ export default function AmbulantaRapoarte() {
                 <div style={{ padding: '14px 20px 10px', fontWeight: 600, fontSize: 15 }}>
                   Detalii călătorii ({toateCursele.length} curse)
                 </div>
-                <div style={{ overflowX: 'auto', paddingBottom: 4 }}>
-                  <table style={{ fontSize: 11, minWidth: 900 }}>
+                <div className="table-wrapper">
+                  <table>
                     <thead>
                       <tr>
-                        <th>Data</th><th>Interval</th>
-                        <th>Plecare</th><th>Sosire</th>
-                        <th style={{ textAlign: 'right' }}>km</th>
-                        <th style={{ textAlign: 'right' }}>Odo start</th>
-                        <th style={{ textAlign: 'right' }}>Odo final</th>
-                        <th>Staț. pornit</th><th>Condus</th><th>Staț. oprit</th>
-                        <th style={{ textAlign: 'right' }}>V. medie</th>
-                        <th style={{ textAlign: 'right' }}>V. max</th>
+                        <th style={{ width: 95 }}>Data</th>
+                        <th style={{ width: 118 }}>Interval</th>
+                        <th className="col-p2 col-wide">Plecare</th>
+                        <th className="col-p2 col-wide">Sosire</th>
+                        <th className="col-num">km</th>
+                        <th className="col-p3 col-num">Odo start</th>
+                        <th className="col-p3 col-num">Odo final</th>
+                        <th className="col-p2">Staț. pornit</th>
+                        <th className="col-p2">Condus</th>
+                        <th className="col-p3">Staț. oprit</th>
+                        <th className="col-p2 col-num">V. medie</th>
+                        <th className="col-p3 col-num">V. max</th>
                       </tr>
                     </thead>
                     <tbody>
                       {toateCursele.map(c => (
-                        <tr key={c.id}>
-                          <td style={{ whiteSpace: 'nowrap' }}>{c.data_cursa}</td>
-                          <td style={{ whiteSpace: 'nowrap' }}>{formatOra(c.ora_plecare)} – {formatOra(c.ora_sosire)}</td>
-                          <td style={{ color: '#0A50B4', maxWidth: 130, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={c.locatie_plecare}>{c.locatie_plecare}</td>
-                          <td style={{ color: '#0A50B4', maxWidth: 130, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={c.locatie_sosire}>{c.locatie_sosire}</td>
-                          <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>{formatKm(c.distanta_km)}</td>
-                          <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>{formatOdo(c.odometru_start)}</td>
-                          <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>{formatOdo(c.odometru_final)}</td>
-                          <td>{formatDurata(c.stationare_pornit_sec)}</td>
-                          <td>{formatDurata(c.durata_condus_sec)}</td>
-                          <td>{c.stationare_oprit_sec != null ? formatDurata(c.stationare_oprit_sec) : '—'}</td>
-                          <td style={{ textAlign: 'right' }}>{formatV(c.viteza_medie)}</td>
-                          <td style={{ textAlign: 'right' }}>{formatV(c.viteza_maxima)}</td>
-                        </tr>
+                        <React.Fragment key={c.id}>
+                          <tr
+                            className={`row-expandable${expandCurseRaport.has(c.id) ? ' row-expanded' : ''}`}
+                            onClick={() => toggleSet(setExpandCurseRaport, c.id)}
+                          >
+                            <td>{c.data_cursa}</td>
+                            <td>{formatOra(c.ora_plecare)} – {formatOra(c.ora_sosire)}</td>
+                            <td className="col-p2 col-wide" style={{ color: '#0A50B4' }} title={c.locatie_plecare}>{c.locatie_plecare}</td>
+                            <td className="col-p2 col-wide" style={{ color: '#0A50B4' }} title={c.locatie_sosire}>{c.locatie_sosire}</td>
+                            <td className="col-num">{formatKm(c.distanta_km)}</td>
+                            <td className="col-p3 col-num">{formatOdo(c.odometru_start)}</td>
+                            <td className="col-p3 col-num">{formatOdo(c.odometru_final)}</td>
+                            <td className="col-p2">{formatDurata(c.stationare_pornit_sec)}</td>
+                            <td className="col-p2">{formatDurata(c.durata_condus_sec)}</td>
+                            <td className="col-p3">{c.stationare_oprit_sec != null ? formatDurata(c.stationare_oprit_sec) : '—'}</td>
+                            <td className="col-p2 col-num">{formatV(c.viteza_medie)}</td>
+                            <td className="col-p3 col-num">{formatV(c.viteza_maxima)}</td>
+                          </tr>
+                          <tr className="row-detail">
+                            <td colSpan={12}>
+                              <dl className="row-detail-grid">
+                                <dt>Plecare</dt><dd>{c.locatie_plecare}</dd>
+                                <dt>Sosire</dt><dd>{c.locatie_sosire}</dd>
+                                <dt>Odo start</dt><dd>{formatOdo(c.odometru_start)}</dd>
+                                <dt>Odo final</dt><dd>{formatOdo(c.odometru_final)}</dd>
+                                <dt>Staț. pornit</dt><dd>{formatDurata(c.stationare_pornit_sec)}</dd>
+                                <dt>Condus</dt><dd>{formatDurata(c.durata_condus_sec)}</dd>
+                                <dt>Staț. oprit</dt><dd>{c.stationare_oprit_sec != null ? formatDurata(c.stationare_oprit_sec) : '—'}</dd>
+                                <dt>V. medie</dt><dd>{formatV(c.viteza_medie)}</dd>
+                                <dt>V. max</dt><dd>{formatV(c.viteza_maxima)}</dd>
+                              </dl>
+                            </td>
+                          </tr>
+                        </React.Fragment>
                       ))}
                     </tbody>
                   </table>

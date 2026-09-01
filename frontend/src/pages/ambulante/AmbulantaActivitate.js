@@ -121,6 +121,15 @@ export default function AmbulantaActivitate() {
   const [ziExpandata, setZiExpandata] = useState(null);
   const [ziDetalii, setZiDetalii] = useState(null);
   const [loadingZi, setLoadingZi] = useState(false);
+  const [curseExpandate, setCurseExpandate] = useState(() => new Set());
+
+  const toggleCursaExpand = (cursaId) => {
+    setCurseExpandate(prev => {
+      const next = new Set(prev);
+      if (next.has(cursaId)) next.delete(cursaId); else next.add(cursaId);
+      return next;
+    });
+  };
 
   // Odometru inline
   const [editOdo, setEditOdo] = useState(false);
@@ -590,10 +599,8 @@ export default function AmbulantaActivitate() {
                     <div style={{ fontWeight: 600, fontSize: 15, color: 'var(--text)', lineHeight: 1.3 }}>
                       {formatData(zi.data_activitate)}
                     </div>
-                    <div style={{
-                      fontSize: 13, color: 'var(--text-secondary)', marginTop: 3,
-                      overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'
-                    }}>
+                    <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginTop: 3,
+                      overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {zi.locatie_start}{zi.locatie_final ? ` → ${zi.locatie_final}` : ''}
                       {totalKm !== null ? ` · ${totalKm} km` : ''}
                     </div>
@@ -622,47 +629,66 @@ export default function AmbulantaActivitate() {
                       <>
                         {/* Tabel curse */}
                         {ziDetalii.curse?.length > 0 ? (
-                          <div style={{ overflowX: 'auto' }}>
-                            <table style={{ fontSize: 12, minWidth: 820 }}>
+                          <div className="table-wrapper">
+                            <table>
                               <thead>
                                 <tr>
-                                  <th style={{ textAlign: 'center' }}>#</th>
-                                  <th>Interval orar</th>
-                                  <th>Plecare</th>
-                                  <th>Sosire</th>
-                                  <th style={{ textAlign: 'right' }}>km</th>
-                                  <th style={{ textAlign: 'right' }}>Odo start</th>
-                                  <th style={{ textAlign: 'right' }}>Odo final</th>
-                                  <th>Durată</th>
-                                  <th style={{ textAlign: 'right' }}>V. medie</th>
-                                  <th style={{ textAlign: 'right' }}>V. max</th>
-                                  <th>Staț. oprit</th>
+                                  <th style={{ width: 32, textAlign: 'center' }}>#</th>
+                                  <th style={{ width: 118 }}>Interval orar</th>
+                                  <th className="col-p2 col-wide">Plecare</th>
+                                  <th className="col-p2 col-wide">Sosire</th>
+                                  <th className="col-num">km</th>
+                                  <th className="col-p3 col-num">Odo start</th>
+                                  <th className="col-p3 col-num">Odo final</th>
+                                  <th className="col-p2">Durată</th>
+                                  <th className="col-p2 col-num">V. medie</th>
+                                  <th className="col-p3 col-num">V. max</th>
+                                  <th className="col-p3">Staț. oprit</th>
                                   {!isFinalizata && <th></th>}
                                 </tr>
                               </thead>
                               <tbody>
                                 {ziDetalii.curse.map(c => (
-                                  <tr key={c.id}>
-                                    <td style={{ textAlign: 'center', fontWeight: 600 }}>{c.ordine}</td>
-                                    <td style={{ whiteSpace: 'nowrap' }}>{c.ora_plecare.slice(0, 5)} – {c.ora_sosire.slice(0, 5)}</td>
-                                    <td style={{ maxWidth: 130, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={c.locatie_plecare}>{c.locatie_plecare}</td>
-                                    <td style={{ maxWidth: 130, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={c.locatie_sosire}>{c.locatie_sosire}</td>
-                                    <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>{c.distanta_km} km</td>
-                                    <td style={{ textAlign: 'right' }}>{c.odometru_start}</td>
-                                    <td style={{ textAlign: 'right' }}>{c.odometru_final}</td>
-                                    <td style={{ whiteSpace: 'nowrap' }}>{formatDurata(c.durata_condus_sec)}</td>
-                                    <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>{c.viteza_medie ?? '—'} km/h</td>
-                                    <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>{c.viteza_maxima ?? '—'} km/h</td>
-                                    <td style={{ whiteSpace: 'nowrap' }}>{c.stationare_oprit_sec != null ? formatDurata(c.stationare_oprit_sec) : '—'}</td>
-                                    {!isFinalizata && (
-                                      <td>
-                                        <div className="table-actions" style={{ gap: 4 }}>
-                                          <button className="btn btn-ghost btn-sm" onClick={() => openCursaModal(c)} title="Editează">✏️</button>
-                                          <button className="btn btn-danger btn-sm" onClick={() => handleDeleteCursa(c.id)} title="Șterge">🗑️</button>
-                                        </div>
+                                  <React.Fragment key={c.id}>
+                                    <tr
+                                      className={`row-expandable${curseExpandate.has(c.id) ? ' row-expanded' : ''}`}
+                                      onClick={() => toggleCursaExpand(c.id)}
+                                    >
+                                      <td style={{ textAlign: 'center', fontWeight: 600 }}>{c.ordine}</td>
+                                      <td title={`${c.ora_plecare.slice(0, 5)} – ${c.ora_sosire.slice(0, 5)}`}>{c.ora_plecare.slice(0, 5)} – {c.ora_sosire.slice(0, 5)}</td>
+                                      <td className="col-p2 col-wide" title={c.locatie_plecare}>{c.locatie_plecare}</td>
+                                      <td className="col-p2 col-wide" title={c.locatie_sosire}>{c.locatie_sosire}</td>
+                                      <td className="col-num">{c.distanta_km} km</td>
+                                      <td className="col-p3 col-num">{c.odometru_start}</td>
+                                      <td className="col-p3 col-num">{c.odometru_final}</td>
+                                      <td className="col-p2">{formatDurata(c.durata_condus_sec)}</td>
+                                      <td className="col-p2 col-num">{c.viteza_medie ?? '—'} km/h</td>
+                                      <td className="col-p3 col-num">{c.viteza_maxima ?? '—'} km/h</td>
+                                      <td className="col-p3">{c.stationare_oprit_sec != null ? formatDurata(c.stationare_oprit_sec) : '—'}</td>
+                                      {!isFinalizata && (
+                                        <td>
+                                          <div className="table-actions" style={{ gap: 4 }}>
+                                            <button className="btn btn-ghost btn-sm" onClick={e => { e.stopPropagation(); openCursaModal(c); }} title="Editează">✏️</button>
+                                            <button className="btn btn-danger btn-sm" onClick={e => { e.stopPropagation(); handleDeleteCursa(c.id); }} title="Șterge">🗑️</button>
+                                          </div>
+                                        </td>
+                                      )}
+                                    </tr>
+                                    <tr className="row-detail">
+                                      <td colSpan={isFinalizata ? 11 : 12}>
+                                        <dl className="row-detail-grid">
+                                          <dt>Plecare</dt><dd>{c.locatie_plecare}</dd>
+                                          <dt>Sosire</dt><dd>{c.locatie_sosire}</dd>
+                                          <dt>Durată</dt><dd>{formatDurata(c.durata_condus_sec)}</dd>
+                                          <dt>V. medie</dt><dd>{c.viteza_medie ?? '—'} km/h</dd>
+                                          <dt>Odo start</dt><dd>{c.odometru_start}</dd>
+                                          <dt>Odo final</dt><dd>{c.odometru_final}</dd>
+                                          <dt>V. max</dt><dd>{c.viteza_maxima ?? '—'} km/h</dd>
+                                          <dt>Staț. oprit</dt><dd>{c.stationare_oprit_sec != null ? formatDurata(c.stationare_oprit_sec) : '—'}</dd>
+                                        </dl>
                                       </td>
-                                    )}
-                                  </tr>
+                                    </tr>
+                                  </React.Fragment>
                                 ))}
                               </tbody>
                             </table>
@@ -689,8 +715,7 @@ export default function AmbulantaActivitate() {
                                     await loadZile();
                                   } catch (err) {
                                     alert(err.response?.data?.error || 'Eroare la ștergere');
-                                  }
-                                }}>🗑️ Șterge ziua</button>
+                                  } }}>🗑️ Șterge ziua</button>
                               )}
                             </>
                           )}

@@ -165,11 +165,9 @@ export default function Dashboard() {
       </div>
 
       {!isAdmin && (
-        <div style={{
-          background: '#FFF9C4', border: '1px solid #F9A825', borderRadius: 8,
-          padding: 12, margin: '0 0 16px 0', width: '100%', boxSizing: 'border-box',
-          fontWeight: 700, color: '#000000', fontSize: 14, lineHeight: 1.5
-        }}>
+        <div style={{ background: '#FFF9C4', border: '1px solid #F9A825', borderRadius: 8,
+          padding: 12, margin: '0 0 16px 0', boxSizing: 'border-box',
+          fontWeight: 700, color: '#000000', fontSize: 14, lineHeight: 1.5 }}>
           ⚠️ Nu uita să îți completezi Foaia de Parcurs și să verifici Pacienții sau Vizitele programate!
         </div>
       )}
@@ -249,10 +247,10 @@ export default function Dashboard() {
                 <table>
                   <thead>
                     <tr>
-                      <th>Nume</th>
-                      <th>Vârstă</th>
+                      <th className="col-wide">Nume</th>
+                      <th className="col-num">Vârstă</th>
                       <th>Telefon</th>
-                      <th>Data</th>
+                      <th className="col-p2">Data</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -262,10 +260,10 @@ export default function Dashboard() {
                         style={{ cursor: 'pointer' }}
                         onClick={() => navigate(`/pacienti/${p.id}`)}
                       >
-                        <td><strong>{p.nume}</strong></td>
-                        <td>{p.varsta ? <span className="badge badge-blue">{p.varsta} ani</span> : '—'}</td>
+                        <td className="col-wide"><strong>{p.nume}</strong></td>
+                        <td className="col-num">{p.varsta ? <span className="badge badge-blue">{p.varsta} ani</span> : '—'}</td>
                         <td style={{ fontSize: 13 }}>{p.telefon || '—'}</td>
-                        <td style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{formatDate(p.data_inregistrare)}</td>
+                        <td className="col-p2" style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{formatDate(p.data_inregistrare)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -293,10 +291,10 @@ export default function Dashboard() {
                   <table>
                     <thead>
                       <tr>
-                        <th>Pacient</th>
-                        <th>Angajat</th>
+                        <th className="col-wide">Pacient</th>
+                        <th className="col-p2">Angajat</th>
                         <th>Data</th>
-                        <th>Încasat</th>
+                        <th className="col-num">Încasat</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -306,10 +304,10 @@ export default function Dashboard() {
                           style={{ cursor: 'pointer' }}
                           onClick={() => navigate(`/pacienti/${v.patient_id}`)}
                         >
-                          <td><strong>{v.patient_name}</strong></td>
-                          <td style={{ fontSize: 13 }}>{v.angajat_name}</td>
+                          <td className="col-wide"><strong>{v.patient_name}</strong></td>
+                          <td className="col-p2" style={{ fontSize: 13 }}>{v.angajat_name}</td>
                           <td style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{formatDate(v.data)}</td>
-                          <td style={{ color: 'var(--secondary)', fontWeight: 600 }}>
+                          <td className="col-num" style={{ color: 'var(--secondary)', fontWeight: 600 }}>
                             {Number(v.suma_incasata || 0).toLocaleString('ro-RO')} lei
                           </td>
                         </tr>
@@ -353,12 +351,10 @@ export default function Dashboard() {
                   const bg = isOverdue ? '#fff5f5' : isToday ? '#fffbeb' : 'var(--bg, #f9fafb)';
                   const borderColor = isOverdue ? 'var(--danger)' : isToday ? '#f59e0b' : 'var(--border)';
                   return (
-                    <div key={v.id} style={{
-                      border: `1px solid ${borderColor}`,
+                    <div key={v.id} style={{ border: `1px solid ${borderColor}`,
                       borderRadius: 'var(--radius-lg)',
                       padding: '12px 14px',
-                      background: bg
-                    }}>
+                      background: bg }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 8 }}>
                         <div>
                           <div style={{ fontWeight: 700, fontSize: 15 }}>
@@ -423,12 +419,10 @@ export default function Dashboard() {
           ) : (
             <div className="card-body" style={{ padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
               {pendingPatients.map(p => (
-                <div key={p.id} style={{
-                  border: '1px solid var(--border)',
+                <div key={p.id} style={{ border: '1px solid var(--border)',
                   borderRadius: 'var(--radius-lg)',
                   padding: '14px 16px',
-                  background: p.status_preluare === 'REFUZAT' ? 'var(--danger-light, #fff5f5)' : 'var(--bg)'
-                }}>
+                  background: p.status_preluare === 'REFUZAT' ? 'var(--danger-light, #fff5f5)' : 'var(--bg)' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 8 }}>
                     <div>
                       <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 4 }}>{p.nume}</div>

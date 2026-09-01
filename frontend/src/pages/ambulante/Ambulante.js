@@ -117,8 +117,8 @@ export default function Ambulante() {
                 <thead>
                   <tr>
                     <th>Nr. Înmatriculare</th>
-                    <th>Odometru curent (km)</th>
-                    <th>Ultima Activitate</th>
+                    <th className="col-num">Odometru curent (km)</th>
+                    <th className="col-p2">Ultima Activitate</th>
                     {isAdmin && <th>Acțiuni</th>}
                   </tr>
                 </thead>
@@ -132,8 +132,8 @@ export default function Ambulante() {
                       <td>
                         <strong style={{ fontSize: 15 }}>{amb.numar_inmatriculare}</strong>
                       </td>
-                      <td>{amb.odometru_curent.toLocaleString('ro-RO')} km</td>
-                      <td style={{ color: 'var(--text-secondary)' }}>
+                      <td className="col-num">{amb.odometru_curent.toLocaleString('ro-RO')} km</td>
+                      <td className="col-p2" style={{ color: 'var(--text-secondary)' }}>
                         {formatDate(amb.ultima_activitate)}
                       </td>
                       {isAdmin && (
