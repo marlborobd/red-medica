@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Layout from './components/Layout';
+import BackupReminder from './components/BackupReminder';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import PatientList from './pages/PatientList';
@@ -121,6 +122,7 @@ export default function App() {
       <AuthProvider>
         <AppRoutes />
         <UpdateBanner />
+        <BackupReminder />
       </AuthProvider>
     </BrowserRouter>
   );

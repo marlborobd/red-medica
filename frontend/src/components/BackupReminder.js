@@ -1,15 +1,59 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { useAuth } from '../context/AuthContext';
+import { triggerManualBackup, getBackupStatus } from '../services/api';
+
+const BACKUP_REMINDER_DAYS = 15;
 
 const formatData = (d) => d
   ? new Date(d).toLocaleDateString('ro-RO', { day: '2-digit', month: '2-digit', year: 'numeric' })
   : 'Niciodată';
 
-// Popup de reminder pentru backup manual, afișat dacă nu s-a mai făcut un
-// backup de peste 15 zile (sau niciodată).
-export default function BackupReminder({ lastBackupAt, onBackup, onDismiss, loading }) {
+// Popup global de reminder pentru backup manual — apare pe orice pagină, cât
+// timp userul e admin, dacă nu s-a mai făcut un backup de peste 15 zile
+// (sau niciodată). Backup-ul e o funcționalitate doar-admin (rutele API
+// cer requireAdmin), deci componenta nu face nimic pentru ceilalți useri.
+export default function BackupReminder() {
+  const { user, isAdmin } = useAuth();
+  const [show, setShow] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [lastBackupAt, setLastBackupAt] = useState(null);
+
+  useEffect(() => {
+    if (!user || !isAdmin) return;
+
+    getBackupStatus().then(r => { if (r.data.lastBackupAt) setLastBackupAt(r.data.lastBackupAt); }).catch(() => {});
+
+    const lastBackupDate = localStorage.getItem('lastBackupDate');
+    if (!lastBackupDate) {
+      setShow(true);
+    } else {
+      const zileTrecute = (Date.now() - new Date(lastBackupDate).getTime()) / (1000 * 60 * 60 * 24);
+      if (zileTrecute > BACKUP_REMINDER_DAYS) setShow(true);
+    }
+  }, [user, isAdmin]);
+
+  if (!user || !isAdmin || !show) return null;
+
+  const handleBackup = async () => {
+    setLoading(true);
+    try {
+      await triggerManualBackup();
+      const now = new Date().toISOString();
+      localStorage.setItem('lastBackupDate', now);
+      setLastBackupAt(now);
+      setShow(false);
+    } catch (_) {
+      // lăsăm popup-ul deschis dacă backup-ul eșuează
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDismiss = () => setShow(false);
+
   return (
     <div
-      onClick={onDismiss}
+      onClick={handleDismiss}
       style={{
         position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 9999,
         display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -26,7 +70,7 @@ export default function BackupReminder({ lastBackupAt, onBackup, onDismiss, load
         }}
       >
         <button
-          onClick={onDismiss}
+          onClick={handleDismiss}
           aria-label="Închide"
           style={{
             position: 'absolute', top: 16, right: 16, background: 'none', border: 'none',
@@ -53,7 +97,7 @@ export default function BackupReminder({ lastBackupAt, onBackup, onDismiss, load
 
         <button
           className="btn btn-primary"
-          onClick={onBackup}
+          onClick={handleBackup}
           disabled={loading}
           style={{ width: '100%', marginTop: 24, padding: '12px 0', fontSize: 15, justifyContent: 'center' }}
         >
@@ -61,7 +105,7 @@ export default function BackupReminder({ lastBackupAt, onBackup, onDismiss, load
         </button>
         <button
           className="btn btn-ghost"
-          onClick={onDismiss}
+          onClick={handleDismiss}
           style={{ width: '100%', marginTop: 10, padding: '12px 0', fontSize: 14, justifyContent: 'center' }}
         >
           Amintește-mi mai târziu
