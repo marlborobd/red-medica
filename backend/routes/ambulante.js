@@ -396,7 +396,18 @@ router.delete('/zile/:id', authenticate, requireAdmin, (req, res) => {
       return res.status(400).json({ error: 'Ziua finalizată nu poate fi ștearsă. Folosiți redeschiderea mai întâi.' });
     }
 
+    db.prepare('DELETE FROM amb_curse WHERE zi_id = ?').run(req.params.id);
     db.prepare('DELETE FROM amb_zile WHERE id = ?').run(req.params.id);
+
+    const ultimaZiFinalizata = db.prepare(
+      "SELECT odometru_final FROM amb_zile WHERE ambulanta_id = ? AND status = 'finalizata' ORDER BY data_activitate DESC, id DESC LIMIT 1"
+    ).get(zi.ambulanta_id);
+    if (ultimaZiFinalizata) {
+      db.prepare(
+        "UPDATE amb_ambulante SET odometru_curent=?, updated_at=datetime('now') WHERE id=?"
+      ).run(ultimaZiFinalizata.odometru_final, zi.ambulanta_id);
+    }
+
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
