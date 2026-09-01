@@ -46,6 +46,18 @@ function recalcStationariOprit(db, ziId) {
   }
 }
 
+// Înregistrează/incrementează frecvența de utilizare a unei adrese (pentru autocomplete).
+function inregistreazaAdresa(db, adresa) {
+  if (!adresa || typeof adresa !== 'string' || !adresa.trim()) return;
+  db.prepare(`
+    INSERT INTO amb_adrese_frecvente (adresa, utilizari, ultima_utilizare)
+    VALUES (?, 1, datetime('now'))
+    ON CONFLICT(adresa) DO UPDATE SET
+      utilizari = utilizari + 1,
+      ultima_utilizare = datetime('now')
+  `).run(adresa.trim());
+}
+
 function calcVitezaMedie(distanta_km, durata_condus_sec) {
   if (!durata_condus_sec || durata_condus_sec <= 0) return null;
   return Math.round(distanta_km / (durata_condus_sec / 3600));
@@ -222,6 +234,8 @@ router.post('/zile', requireAmbAccess, (req, res) => {
       'INSERT INTO amb_zile (ambulanta_id, data_activitate, locatie_start, odometru_start, creat_de) VALUES (?, ?, ?, ?, ?)'
     ).run(ambulanta_id, data_activitate, locatie_start, odometruStart, req.user.id);
 
+    inregistreazaAdresa(db, locatie_start);
+
     res.status(201).json(db.prepare('SELECT * FROM amb_zile WHERE id = ?').get(result.lastInsertRowid));
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -258,6 +272,9 @@ router.put('/zile/:id', requireAmbAccess, (req, res) => {
     db.prepare(
       "UPDATE amb_zile SET locatie_start=?, locatie_final=?, odometru_start=?, odometru_final=?, updated_at=datetime('now') WHERE id=?"
     ).run(newLocatieStart, newLocatieFinala, newOdometruStart, newOdometruFinal, req.params.id);
+
+    if (req.body.locatie_start !== undefined) inregistreazaAdresa(db, newLocatieStart);
+    if (req.body.locatie_final !== undefined) inregistreazaAdresa(db, newLocatieFinala);
 
     if (req.body.odometru_start !== undefined && parseFloat(req.body.odometru_start) !== zi.odometru_start) {
       propagateOdometer(db, req.params.id);
@@ -301,6 +318,8 @@ router.post('/zile/:id/finalizare', requireAmbAccess, (req, res) => {
     db.prepare(
       "UPDATE amb_zile SET status='finalizata', locatie_final=?, odometru_final=?, updated_at=datetime('now') WHERE id=?"
     ).run(locatie_final, odometruFinal, req.params.id);
+
+    inregistreazaAdresa(db, locatie_final);
 
     db.prepare(
       "UPDATE amb_ambulante SET odometru_curent=?, updated_at=datetime('now') WHERE id=?"
@@ -414,6 +433,26 @@ router.delete('/zile/:id', authenticate, requireAdmin, (req, res) => {
   }
 });
 
+// ─── Adrese frecvente (autocomplete) ─────────────────────────────────────────
+
+// GET /api/amb/adrese?q=text
+router.get('/adrese', requireAmbAccess, (req, res) => {
+  try {
+    const db = getDb();
+    const q = (req.query.q || '').trim();
+    let sql = 'SELECT adresa, utilizari FROM amb_adrese_frecvente';
+    const params = [];
+    if (q) {
+      sql += ' WHERE adresa LIKE ? COLLATE NOCASE';
+      params.push(`%${q}%`);
+    }
+    sql += ' ORDER BY utilizari DESC, ultima_utilizare DESC LIMIT 10';
+    res.json(db.prepare(sql).all(...params));
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ─── Curse ──────────────────────────────────────────────────────────────────
 
 // POST /api/amb/zile/:id/curse
@@ -493,6 +532,9 @@ router.post('/zile/:id/curse', requireAmbAccess, (req, res) => {
 
     recalcStationariOprit(db, req.params.id);
 
+    inregistreazaAdresa(db, locatie_plecare);
+    inregistreazaAdresa(db, locatie_sosire);
+
     const cursa = db.prepare('SELECT * FROM amb_curse WHERE id = ?').get(result.lastInsertRowid);
     res.status(201).json({ ...cursa, avertismente });
   } catch (err) {
@@ -566,6 +608,9 @@ router.put('/curse/:id', requireAmbAccess, (req, res) => {
 
     propagateOdometer(db, cursa.zi_id);
     recalcStationariOprit(db, cursa.zi_id);
+
+    if (req.body.locatie_plecare !== undefined) inregistreazaAdresa(db, newLocPlecare);
+    if (req.body.locatie_sosire !== undefined) inregistreazaAdresa(db, newLocSosire);
 
     res.json(db.prepare('SELECT * FROM amb_curse WHERE id = ?').get(req.params.id));
   } catch (err) {

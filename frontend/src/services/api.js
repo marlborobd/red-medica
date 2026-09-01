@@ -119,6 +119,9 @@ export const deleteCursa = (id) => api.delete(`/amb/curse/${id}`);
 // Distanță
 export const calcDistanta = (data) => api.post('/amb/distanta', data);
 
+// Adrese frecvente (autocomplete)
+export const getAdreseFrecvente = (q) => api.get('/amb/adrese', { params: { q } });
+
 // Raport
 export const getRaportAmb = (params) => api.get('/amb/raport', { params });
 

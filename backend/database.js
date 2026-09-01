@@ -287,6 +287,27 @@ function migrateAmbulante() {
   }
 }
 
+// ===== Migrare: creare tabel amb_adrese_frecvente (autocomplete adrese ambulanță) =====
+function migrateAdreseFrecvente() {
+  try {
+    sqlJsDb.exec(`
+      CREATE TABLE IF NOT EXISTS amb_adrese_frecvente (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        adresa TEXT UNIQUE NOT NULL,
+        utilizari INTEGER NOT NULL DEFAULT 1,
+        ultima_utilizare TEXT DEFAULT (datetime('now'))
+      )
+    `);
+    sqlJsDb.exec(`
+      CREATE INDEX IF NOT EXISTS idx_amb_adrese_utilizari ON amb_adrese_frecvente(utilizari DESC);
+    `);
+    saveDb();
+    console.log('✓ Migration: tabela amb_adrese_frecvente creata');
+  } catch (err) {
+    console.error('[Migration amb_adrese_frecvente]', err.message);
+  }
+}
+
 // ===== Migrare: extinde CHECK role cu 'ambulanta' =====
 function migrateUsersRoleConstraint() {
   try {
@@ -559,6 +580,15 @@ async function initDatabase() {
 
     CREATE INDEX IF NOT EXISTS idx_amb_zile ON amb_zile(ambulanta_id, data_activitate);
     CREATE INDEX IF NOT EXISTS idx_amb_curse ON amb_curse(zi_id, ordine);
+
+    CREATE TABLE IF NOT EXISTS amb_adrese_frecvente (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      adresa TEXT UNIQUE NOT NULL,
+      utilizari INTEGER NOT NULL DEFAULT 1,
+      ultima_utilizare TEXT DEFAULT (datetime('now'))
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_amb_adrese_utilizari ON amb_adrese_frecvente(utilizari DESC);
   `);
 
   // Migrări pentru baze de date existente
@@ -574,6 +604,7 @@ async function initDatabase() {
   migrateFoiParcurs();
   migrateAmbulante();
   migrateVitezaMedieSursa();
+  migrateAdreseFrecvente();
   migrateUsersRoleConstraint();
 
   // Admin

@@ -6,6 +6,7 @@ import {
   getZile, createZi, getZi, finalizeazaZi, redeschideZi, deleteZi,
   createCursa, updateCursa, deleteCursa, calcDistanta,
 } from '../../services/api';
+import AddressAutocomplete from '../../components/AddressAutocomplete';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -225,9 +226,10 @@ export default function AmbulantaActivitate() {
   // ── Zi nouă ────────────────────────────────────────────────────────────────
 
   const openZiModal = () => {
+    const ultimaFinalizata = zile.find(z => z.status === 'finalizata' && z.locatie_final);
     setZiForm({
       data_activitate: todayStr(),
-      locatie_start: '',
+      locatie_start: ultimaFinalizata ? ultimaFinalizata.locatie_final : '',
       odometru_start: ambulanta ? String(ambulanta.odometru_curent) : '',
     });
     setZiError('');
@@ -724,8 +726,8 @@ export default function AmbulantaActivitate() {
                 </div>
                 <div className="form-group">
                   <label className="form-label">Locație start <span className="required">*</span></label>
-                  <input className="form-control" value={ziForm.locatie_start}
-                    onChange={e => setZiForm(p => ({ ...p, locatie_start: e.target.value }))}
+                  <AddressAutocomplete value={ziForm.locatie_start}
+                    onChange={val => setZiForm(p => ({ ...p, locatie_start: val }))}
                     placeholder="ex: Strada Principală 1, Arad" />
                 </div>
                 <div className="form-group">
@@ -813,14 +815,14 @@ export default function AmbulantaActivitate() {
                 {/* Locații */}
                 <div className="form-group">
                   <label className="form-label">Locație plecare <span className="required">*</span></label>
-                  <input className="form-control" value={cursaForm.locatie_plecare}
-                    onChange={e => updateCursaField('locatie_plecare', e.target.value)}
+                  <AddressAutocomplete value={cursaForm.locatie_plecare}
+                    onChange={val => updateCursaField('locatie_plecare', val)}
                     placeholder="Adresă completă" />
                 </div>
                 <div className="form-group">
                   <label className="form-label">Locație sosire <span className="required">*</span></label>
-                  <input className="form-control" value={cursaForm.locatie_sosire}
-                    onChange={e => updateCursaField('locatie_sosire', e.target.value)}
+                  <AddressAutocomplete value={cursaForm.locatie_sosire}
+                    onChange={val => updateCursaField('locatie_sosire', val)}
                     placeholder="Adresă completă" />
                 </div>
 
@@ -947,8 +949,8 @@ export default function AmbulantaActivitate() {
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                     <div className="form-group">
                       <label className="form-label">Locație finală <span className="required">*</span></label>
-                      <input className="form-control" value={finalForm.locatie_final}
-                        onChange={e => setFinalForm(p => ({ ...p, locatie_final: e.target.value }))}
+                      <AddressAutocomplete value={finalForm.locatie_final}
+                        onChange={val => setFinalForm(p => ({ ...p, locatie_final: val }))}
                         placeholder="Adresa de retur / parcare" />
                     </div>
                     <div className="form-group">
