@@ -312,6 +312,26 @@ router.post('/zile/:id/finalizare', requireAmbAccess, (req, res) => {
   }
 });
 
+// POST /api/amb/zile/:id/redeschidere  (admin only)
+router.post('/zile/:id/redeschidere', requireAmbAccess, requireAdmin, (req, res) => {
+  try {
+    const db = getDb();
+    const zi = db.prepare('SELECT * FROM amb_zile WHERE id = ?').get(req.params.id);
+    if (!zi) return res.status(404).json({ error: 'Ziua nu a fost găsită.' });
+    if (zi.status !== 'finalizata') {
+      return res.status(400).json({ error: 'Ziua nu este finalizată.' });
+    }
+
+    db.prepare(
+      "UPDATE amb_zile SET status='deschisa', updated_at=datetime('now') WHERE id=?"
+    ).run(req.params.id);
+
+    res.json(db.prepare('SELECT * FROM amb_zile WHERE id = ?').get(req.params.id));
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // POST /api/amb/ambulante
 router.post('/ambulante', authenticate, requireAdmin, (req, res) => {
   try {
