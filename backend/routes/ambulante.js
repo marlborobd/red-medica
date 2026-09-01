@@ -435,6 +435,21 @@ router.delete('/zile/:id', authenticate, requireAdmin, (req, res) => {
 
 // ─── Adrese frecvente (autocomplete) ─────────────────────────────────────────
 
+// POST /api/amb/adrese  { adresa }  — înregistrează manual o adresă (ex: selecție din Google Places)
+router.post('/adrese', requireAmbAccess, (req, res) => {
+  try {
+    const db = getDb();
+    const { adresa } = req.body;
+    if (!adresa || typeof adresa !== 'string' || !adresa.trim()) {
+      return res.status(400).json({ error: 'adresa este obligatorie.' });
+    }
+    inregistreazaAdresa(db, adresa);
+    res.status(201).json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // GET /api/amb/adrese?q=text
 router.get('/adrese', requireAmbAccess, (req, res) => {
   try {

@@ -121,6 +121,7 @@ export const calcDistanta = (data) => api.post('/amb/distanta', data);
 
 // Adrese frecvente (autocomplete)
 export const getAdreseFrecvente = (q) => api.get('/amb/adrese', { params: { q } });
+export const salveazaAdresaFrecventa = (adresa) => api.post('/amb/adrese', { adresa });
 
 // Raport
 export const getRaportAmb = (params) => api.get('/amb/raport', { params });

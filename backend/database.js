@@ -308,6 +308,49 @@ function migrateAdreseFrecvente() {
   }
 }
 
+// ===== Migrare: backfill amb_adrese_frecvente din date existente (amb_zile, amb_curse) =====
+function migrateAdreseFrecventeBackfill() {
+  try {
+    const countStmt = sqlJsDb.prepare('SELECT COUNT(*) as n FROM amb_adrese_frecvente');
+    countStmt.step();
+    const { n } = countStmt.getAsObject();
+    countStmt.free();
+    if (n > 0) return; // deja populat (backfill anterior sau utilizare curentă)
+
+    const upsert = (adresa) => {
+      if (!adresa || typeof adresa !== 'string' || !adresa.trim()) return;
+      sqlJsDb.run(`
+        INSERT INTO amb_adrese_frecvente (adresa, utilizari, ultima_utilizare)
+        VALUES (?, 1, datetime('now'))
+        ON CONFLICT(adresa) DO UPDATE SET
+          utilizari = utilizari + 1,
+          ultima_utilizare = datetime('now')
+      `, [adresa.trim()]);
+    };
+
+    const zileStmt = sqlJsDb.prepare('SELECT locatie_start, locatie_final FROM amb_zile');
+    while (zileStmt.step()) {
+      const row = zileStmt.getAsObject();
+      upsert(row.locatie_start);
+      upsert(row.locatie_final);
+    }
+    zileStmt.free();
+
+    const curseStmt = sqlJsDb.prepare('SELECT locatie_plecare, locatie_sosire FROM amb_curse');
+    while (curseStmt.step()) {
+      const row = curseStmt.getAsObject();
+      upsert(row.locatie_plecare);
+      upsert(row.locatie_sosire);
+    }
+    curseStmt.free();
+
+    saveDb();
+    console.log('✓ Migration: amb_adrese_frecvente populat din date existente (amb_zile, amb_curse)');
+  } catch (err) {
+    console.error('[Migration amb_adrese_frecvente backfill]', err.message);
+  }
+}
+
 // ===== Migrare: extinde CHECK role cu 'ambulanta' =====
 function migrateUsersRoleConstraint() {
   try {
@@ -605,6 +648,7 @@ async function initDatabase() {
   migrateAmbulante();
   migrateVitezaMedieSursa();
   migrateAdreseFrecvente();
+  migrateAdreseFrecventeBackfill();
   migrateUsersRoleConstraint();
 
   // Admin
