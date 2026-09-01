@@ -481,6 +481,20 @@ export default function AmbulantaActivitate() {
     }
   };
 
+  const handleRedeschideDinLista = async (e, ziId) => {
+    e.stopPropagation();
+    if (!window.confirm('Redeschideți ziua? Odometrul ambulanței nu se va readuce automat.')) return;
+    try {
+      await redeschideZi(ziId);
+      await loadZile();
+      if (ziExpandata === ziId) {
+        await reloadZi(ziId);
+      }
+    } catch (err) {
+      alert(err.response?.data?.error || 'Eroare');
+    }
+  };
+
   // ── Render ─────────────────────────────────────────────────────────────────
 
   if (loading) {
@@ -586,6 +600,13 @@ export default function AmbulantaActivitate() {
                     <span className={`badge ${isFinalizata ? 'badge-green' : 'badge-blue'}`}>
                       {isFinalizata ? '✓ Finalizată' : '● Deschisă'}
                     </span>
+                    {isFinalizata && isAdmin && (
+                      <button
+                        className="btn btn-ghost btn-sm"
+                        onClick={e => handleRedeschideDinLista(e, zi.id)}
+                        title="Redeschide ziua"
+                      >↩ Redeschide</button>
+                    )}
                     <span style={{ color: '#bbb', fontSize: 13, lineHeight: 1 }}>{isOpen ? '▲' : '▼'}</span>
                   </div>
                 </div>
